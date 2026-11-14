@@ -5,6 +5,15 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -60,3 +69,22 @@ jobs:
             build/felucca.bin
             build/loader/ota.bin
           if-no-files-found: error
+
+      - name: Armar el instalador web
+        run: python3 web/make_site.py build/felucca.fwsc "0.1-${GITHUB_SHA::7}" site
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: site
+
+  publicar:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}webapp/installer/
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
