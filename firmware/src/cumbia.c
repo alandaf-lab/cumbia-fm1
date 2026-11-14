@@ -668,7 +668,8 @@ static void cb_rate_step(void)           /* un 16avo: se acerca al valor de la p
 static uint32_t cb_bpm_now(void) { return (uint32_t)((int32_t)cb.bpm + cbc.bpm); }
 static uint32_t cb_len16_now(void)       /* muestras por 16avo al tempo de la cinta */
 {
-    return (uint32_t)(((uint64_t)FS * 15u << 16) / ((uint64_t)cb_bpm_now() * cb_rate));
+    uint32_t q8 = ((uint32_t)FS * 15u << 8) / cb_bpm_now();   /* Q8, a velocidad normal (sin división de 64 bits) */
+    return (q8 << 8) / (cb_rate >> 8);
 }
 static void cb_tune_block(uint32_t n)    /* G_TUNE: la cinta lenta, más el vaivén (solo se oye en rebajada) */
 {
