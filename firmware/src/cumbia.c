@@ -491,9 +491,9 @@ static void perc_hit(uint32_t inst, int32_t at, int32_t vel)
     note(CB_PERC, (int32_t)m, at, (int32_t)(cb_kit ? cb_len16 / 4u : cb_len16), vel);
     cb_hits |= 1u << inst;
 }
-static const uint8_t CB_BB_K[2][4][2] = {{{0, 107}, {7, 85}, {10, 96}}, {{0, 107}, {3, 64}, {10, 96}, {11, 53}}};   /* (el boom bap
+static const uint8_t CB_BB_K[2][4][2] = {{{0, 127}, {7, 101}, {10, 114}}, {{0, 127}, {3, 76}, {10, 114}, {11, 63}}};   /* (el boom bap
                                                          * suena con la misma energía que la percusión de cumbia) */
-static const uint8_t CB_BB_S[4][2] = {{4, 100}, {12, 100}, {9, 18}, {15, 22}};   /* 2 y 4, y los fantasmas */
+static const uint8_t CB_BB_S[4][2] = {{4, 120}, {12, 120}, {9, 21}, {15, 26}};   /* 2 y 4, y los fantasmas */
 
 static void cb_play_step(uint32_t g)
 {
@@ -607,6 +607,10 @@ static void cb_user_track(track_t *t, uint32_t slot, uint32_t rel)
     t->p[P_DEC] = 127;
     t->p[P_SUS] = 127;
     t->p[P_REL] = (int16_t)rel;
+    t->p[P_VOICE] = V_POLY;
+    t->p[P_GLIDE] = 0;                    /* (sin deslizar desde la nota anterior: el grito y el golpe a su altura) */
+    t->p[P_LD_PIT] = 0;
+    t->p[P_ED_PIT] = 0;
 }
 /* las pistas de samples de usuario: los one-shots de USR1 / USR2 si el instalador los cargó, si no DRUM (la
  * percusión) o nada (los gritos). Al encender (cumbia_tracks) y al terminar de escribirse una ranura (editor.c) */

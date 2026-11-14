@@ -63,16 +63,19 @@ def build():
     for i, y in enumerate(ys):
         s = [int(v) for v in np.clip(np.round(y * 30000), -32768, 32767)]
         zones.append((s, KEY0 + i, KEY0 + i, KEY0 + i))
-    return sio.user_slot("CUMBIA", zones)
+    import zlib
+    hdr, data = sio.user_slot("CUMBIA", zones)
+    tag = "KT%06X" % (zlib.crc32(data) & 0xFFFFFF)          # el nombre cambia con el contenido (el instalador compara)
+    return hdr[:8] + tag.encode().ljust(8, b"\0") + hdr[16:], data, tag
 
 
 if __name__ == "__main__":
-    hdr, data = build()
+    hdr, data, tag = build()
     (ROOT / "build").mkdir(exist_ok=True)
     (ROOT / "build/kit_perc.hdr").write_bytes(hdr)
     (ROOT / "build/kit_perc.bin").write_bytes(data)
     (ROOT / "web/kit_perc.js").write_text(
         "/* tools/gen_kit.py: la ranura USR1 con la percusión (cabecera 480 B, luego el ADPCM) */\n"
-        "const KIT_PERC = {name: 'CUMBIA', hdr: '%s',\n  data: '%s'};\n"
-        % (base64.b64encode(hdr).decode(), base64.b64encode(data).decode()))
+        "const KIT_PERC = {name: '%s', hdr: '%s',\n  data: '%s'};\n"
+        % (tag, base64.b64encode(hdr).decode(), base64.b64encode(data).decode()))
     print(f"kit: {len(INST) + 2} zonas, {len(data)} B de {sio.SLOT_MAX_DATA}")

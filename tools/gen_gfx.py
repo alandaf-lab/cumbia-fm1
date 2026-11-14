@@ -21,7 +21,7 @@ SPRITES = (
     [f"acordeon_{i}" for i in range(3)] + [f"guacharaca_{i}" for i in range(4)] +
     [f"{n}_{i}" for n in ("bajo", "congas", "timbal", "micro") for i in range(3)] +
     [f"dado_{i}" for i in range(10)] +
-    ["fx_rebajada", "fx_reverb", "fx_tono", "fx_eco_sonidero", "fx_boom_bap", "fx_cinta_atras", "gritos_16",
+    ["fx_rebajada", "fx_reverb", "fx_tono", "fx_eco_sonidero", "fx_boom_bap", "fx_cinta_atras", "fx_ahogada", "fx_freno", "fx_repeticion", "gritos_16",
      "gritos_24", "papel_acordes", "papel_remates", "papel_voz", "papel_melodia", "papel_final",
      "logo_encabezado_20px", "logo_arranque_240"])
 

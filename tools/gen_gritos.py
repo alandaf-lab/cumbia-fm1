@@ -28,33 +28,44 @@ def one(name):
     from math import gcd
     g = gcd(sio.SLOT_RATE, sr)
     y = resample_poly(x, sio.SLOT_RATE // g, sr // g)
-    nz = np.nonzero(np.abs(y) > .01 * np.abs(y).max())[0]
+    nz = np.nonzero(np.abs(y) > .003 * np.abs(y).max())[0]   # (bajo: el final suave de la frase se queda)
     y = y[max(0, nz[0] - 32):nz[-1] + 64]
     f = min(len(y) // 4, 400)
     y[-f:] *= np.linspace(1, 0, f)
     return y
 
 
-def build(lst, name, g=None):
+def rms(y):
+    return float(np.sqrt(np.mean(y ** 2)))
+
+
+def build(lst, name, g=None, like=None):
+    """like: el RMS (ya con g) al que se igualan, uno por uno (las frases nuevas con las autorizadas)"""
     ys = [one(n) for n, _ in lst]
     g = g or 30000 / max(np.abs(y).max() for y in ys)
+    if like:
+        ys = [y * min(like / (rms(y) * g), 30000 / (np.abs(y).max() * g)) for y in ys]
     zones = []
     for i, ((_, m0), y) in enumerate(zip(lst, ys)):
         s = [int(v) for v in np.clip(np.round(y * g), -32768, 32767)]
         r = 12 + 20 * i                                   # = cumbia.c cb_grito
         zones.append((s, r, r - 10, r + 9))               # tal como se grabó: la tecla R, sin afinar
-    return sio.user_slot(name, zones), g
+    import zlib
+    hdr, data = sio.user_slot(name, zones)
+    tag = name[:2] + "%06X" % (zlib.crc32(data) & 0xFFFFFF)   # el nombre cambia con el contenido: el instalador lo
+    hdr = hdr[:8] + tag.encode().ljust(8, b"\0") + hdr[16:]   # reescribe si no es el mismo (no solo por el nombre)
+    return (hdr, data, tag), g, float(np.mean([rms(y) * g for y in ys]))
 
 
 if __name__ == "__main__":
     (ROOT / "build").mkdir(exist_ok=True)
-    (hdr, data), g = build(GRITOS, "GRITOS")
-    (hdr2, data2), _ = build(GRITOS2, "GRITOS2", g)       # el mismo nivel que los otros
+    (hdr, data, t1), g, lv = build(GRITOS, "GRITOS")
+    (hdr2, data2, t2), _, _ = build(GRITOS2, "GRITOS2", g, lv)   # cada una al nivel promedio de las autorizadas
     js = "/* tools/gen_gritos.py: USR2 los gritos de la voz C, USR3 los de las voces A y B (cabecera 480 B, el ADPCM) */\n"
-    for nm, var, h, d in (("GRITOS", "GRITOS", hdr, data), ("GRITOS2", "GRITOS2", hdr2, data2)):
+    for nm, var, h, d, tag in (("GRITOS", "GRITOS", hdr, data, t1), ("GRITOS2", "GRITOS2", hdr2, data2, t2)):
         (ROOT / f"build/{nm.lower()}.hdr").write_bytes(h)
         (ROOT / f"build/{nm.lower()}.bin").write_bytes(d)
-        js += "const %s = {name: '%s', hdr: '%s',\n  data: '%s'};\n" % (var, nm, base64.b64encode(h).decode(),
+        js += "const %s = {name: '%s', hdr: '%s',\n  data: '%s'};\n" % (var, tag, base64.b64encode(h).decode(),
                                                                        base64.b64encode(d).decode())
         print(f"{nm}: {len(d)} B de {sio.SLOT_MAX_DATA}")
     (ROOT / "web/gritos.js").write_text(js)

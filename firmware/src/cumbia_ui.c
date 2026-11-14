@@ -158,11 +158,11 @@ static void cb_dice(void)
 }
 /* efectos push (los de Felucca, perform.c), mientras se mantiene el botón */
 #define CB_LPF 0xFFu
-static const struct { uint8_t btn, pf; const char *name; } CB_PUSH[4] = {
-    {B_ENV, CB_LPF, "AHOGADA"},         /* un pasabajos fijo: la música ahogada */
-    {B_EDIT, PF_TAPE, "FRENO"},          /* la tornamesa se apaga */
-    {B_ARP, PF_R16, "REPETICION"},       /* repite el último 16avo (un octavo no cabe en el búfer abajo de 81 BPM) */
-    {B_SEQ, PF_ETHR, "ECO A TODO"},      /* toda la mezcla al eco */
+static const struct { uint8_t btn, pf, icon; const char *name; } CB_PUSH[4] = {
+    {B_ENV, CB_LPF, SPR_FX_AHOGADA, "AHOGADA"},         /* un pasabajos fijo: la música ahogada */
+    {B_EDIT, PF_TAPE, SPR_FX_FRENO, "FRENO"},          /* la tornamesa se apaga */
+    {B_ARP, PF_R16, SPR_FX_REPETICION, "REPETICION"},       /* repite el último 16avo (un octavo no cabe en el búfer abajo de 81 BPM) */
+    {B_SEQ, PF_ETHR, SPR_FX_ECO_SONIDERO, "ECO A TODO"},      /* toda la mezcla al eco */
 };
 static void cb_ui_input(void)
 {
@@ -371,12 +371,10 @@ static void cb_draw_head(void)
         for (i = 0; i < NPART; i++) {
             int32_t x = 3 + 59 * (int32_t)i;
             cb_num(b, (int32_t)cb_mix[i] * 100 / 127, "");
-            cv_rrect(x, 28, 57, 44, 6, cbu.dim, 0);
-            if (IC[i] < SPR_N)
-                cb_spr(x + 16, 30, IC[i], cbu.ramp);
-            else
-                cb_text_c(x + 28, 34, &AF_S, LB[i], cbu.fg);
-            cb_text_c(x + 28, 54, &AF_S, b, cbu.fg);
+            cv_rrect(x, 28, 57, 44, 6, cb_rgb(CB_COLORS[cbu.color & 7u], 2), 0);   /* (como las otras tarjetas) */
+            (void)IC;
+            cb_text_c(x + 28, 31, &AF_S, LB[i], cbu.mid);
+            cb_text_c(x + 28, 49, &AF_M, b, cbu.fg);
         }
         cv_blit(0, 0);
         return;
@@ -403,8 +401,19 @@ static void cb_draw_panel(void)
     else
         cb_spr(88, 13, SPR_BAILARIN_0 + cbu.dancer % 8u, cbc.cinta ? cbu.rdim : cbu.ramp);
     cb_spr(164, 33, cbu.rkind + cbu.card_r, cbu.ramp);
-    if (cbc.cinta)
-        cb_spr(8, 2, SPR_FX_CINTA_ATRAS, cbu.ramp);
+    {                                    /* los efectos push que suenan: sus íconos arriba a la izquierda */
+        int32_t x = 8;
+        uint32_t k;
+        if (cbc.cinta) {
+            cb_spr(x, 2, SPR_FX_CINTA_ATRAS, cbu.ramp);
+            x += 28;
+        }
+        for (k = 0; k < 4u; k++)
+            if (cbu.push[k]) {
+                cb_spr(x, 2, CB_PUSH[k].icon, cbu.ramp);
+                x += 28;
+            }
+    }
     cv_blit(0, 76);
 }
 static void cb_draw_foot(void)
