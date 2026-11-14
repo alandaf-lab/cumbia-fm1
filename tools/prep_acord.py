@@ -36,7 +36,7 @@ for m,mt in sorted(META.items(), key=lambda k:int(k[0])):
     hp=sosfiltfilt(butter(4,max(70,0.7*f0),'high',fs=TR,output='sos'), y[:n2+400])[:n2]
     a=np.ones(n2); a[n1:]=0.5+0.5*np.cos(np.pi*np.arange(n2-n1)/(n2-n1))
     y[:n2]=hp*a+y[:n2]*(1-a)
-    fi=int(0.006*TR); y[:fi]*=0.5-0.5*np.cos(np.pi*np.arange(fi)/fi)
+    fi=int(0.025*TR); y[:fi]*=0.5-0.5*np.cos(np.pi*np.arange(fi)/fi)   # ataque de 25 ms, como el botón real
     y=np.clip(y,-32767,32767).astype(np.int16)
     o=wave.open(f'{OUT}/{m}.wav','wb'); o.setnchannels(1); o.setsampwidth(2); o.setframerate(TR); o.writeframes(y.tobytes()); o.close()
     loops[m]={'ls':ls,'le':le,'root':int(m)+mt['cents']/100}
