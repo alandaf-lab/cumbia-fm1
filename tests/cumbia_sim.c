@@ -24,7 +24,12 @@ int main(int argc, char **argv)
                                             {"build/gritos2.hdr", "build/gritos2.bin"}};
         for (i = 0; i < 3u && !getenv("NOKIT"); i++) {
             FILE *a = fopen(F[i][0], "rb"), *b = fopen(F[i][1], "rb");
-            if (!a || !b || !fread(host_slots[i], 1, 512, a) || !fread(host_slots[i] + 512, 1, sizeof host_slots[i] - 512, b))
+            if (!a || !b) {
+                if (i < 2u)
+                    return 1;
+                continue;                     /* (USR3: opcional) */
+            }
+            if (!fread(host_slots[i], 1, 512, a) || !fread(host_slots[i] + 512, 1, sizeof host_slots[i] - 512, b))
                 return 1;
             fclose(a);
             fclose(b);

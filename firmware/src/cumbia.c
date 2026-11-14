@@ -740,23 +740,22 @@ static void cumbia_stop(void)
 }
 
 /* ------------------------------------------------------------- gritos --- */
-/* tools/gen_gritos.py: USR2 los cinco gritos de la voz C, USR3 seis más (voces A y B). El grito j de una ranura en las
+/* tools/gen_gritos.py: USR2 los gritos (la voz C; USR3 queda para frases nuevas). El grito j de una ranura en las
  * teclas R - 10 .. R + 9, R = 12 + 20 j, su altura natural (CB_VOZ_M0, redondeada) en R; la fracción de semitono va en
  * la raíz de la zona. Se afina a la tónica o la quinta más cercana: dentro del tono */
-#define CB_NVOZ 11u
-static const uint8_t CB_VOZ_M0[CB_NVOZ] = {63, 55, 70, 61, 48,   /* C: wepa, cumbia, opa, a bailar, Monterrey */
-                                           62, 54, 68, 62, 59, 51};   /* (= round() de gen_gritos.py) */   /* A: wepa, cumbia, opa, a bailar; B: wepa, cumbia */
+#define CB_NVOZ 5u
+static const uint8_t CB_VOZ_M0[CB_NVOZ] = {63, 55, 70, 61, 48};   /* wepa, cumbia, opa, a bailar, Monterrey (= round() de
+                                                                   * gen_gritos.py) */
 static volatile uint8_t cb_grito_on;     /* el último grito disparado + 1 (cumbia_ui.c: el micrófono) */
 static void cb_grito(uint32_t i)         /* contexto de audio (keyboard_block) */
 {
     int32_t best = 0, bd = 99, m, at = 0;
     uint32_t slot, j;
-    if (!cb_voz || i >= CB_NVOZ)
+    if (!cb_voz)
         return;
-    if (i >= 5u && !usr_nz[2])
-        i = (i - 5u) % 5u;                /* (sin USR3: los de la voz C) */
-    slot = i < 5u ? 1u : 2u;
-    j = i < 5u ? i : i - 5u;
+    i %= CB_NVOZ;                        /* (las teclas de arriba repiten los cinco, hasta que haya frases nuevas) */
+    slot = 1u;
+    j = i;
     for (m = 30; m < 90; m++) {
         int32_t pc = ((m - cb_tn) % 12 + 12) % 12, d = m - CB_VOZ_M0[i];
         d = d < 0 ? -d : d;
@@ -780,7 +779,7 @@ static void cb_grito(uint32_t i)         /* contexto de audio (keyboard_block) *
 
 /* ---------------------------------------------------- teclado del FM-1 --- */
 /* las teclas blancas tocan el acordeón en la escala de la canción (menor natural desde la tónica); las negras, los
- * gritos (las cinco del grupo de abajo: la voz C; las seis de arriba: las voces A y B). Contexto de audio (seq.c keyboard_block) */
+ * gritos (los cinco en las negras de abajo, y de nuevo en las de arriba). Contexto de audio (seq.c keyboard_block) */
 static const uint8_t CB_KB_WHITE[27] = {0, 0xFF, 1, 0xFF, 2, 0xFF, 3, 4, 0xFF, 5, 0xFF, 6, 7, 0xFF, 8, 0xFF, 9, 0xFF, 10, 11,
     0xFF, 12, 0xFF, 13, 14, 0xFF, 15};
 static const uint8_t CB_KB_BLACK[27] = {0, 1, 0, 2, 0, 3, 0, 0, 4, 0, 5, 0, 0, 6, 0, 7, 0, 8, 0, 0, 9, 0, 10, 0, 0, 11, 0};
