@@ -1,0 +1,62 @@
+# Compila el firmware para el M-VAVE FM-1 en cada cambio y deja el instalable como artefacto.
+name: Compilar firmware
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dependencias de Python
+        run: pip install Pillow fonttools
+
+      - name: Toolchain de JieLi (caché)
+        id: tc
+        uses: actions/cache@v4
+        with:
+          path: ~/.jieli
+          key: jieli-toolchain-v1
+
+      - name: Descargar toolchain de JieLi
+        if: steps.tc.outputs.cache-hit != 'true'
+        run: tools/get_toolchain.sh
+
+      - name: SDK AC79 de JieLi (caché)
+        id: sdk
+        uses: actions/cache@v4
+        with:
+          path: ~/fw-AC79_AIoT_SDK
+          key: ac79-sdk-V1.2.1_2023-12-13
+
+      - name: Descargar SDK AC79
+        if: steps.sdk.outputs.cache-hit != 'true'
+        run: |
+          for i in 1 2 3; do
+            git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
+              https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK && break
+            rm -rf ~/fw-AC79_AIoT_SDK; sleep 20
+          done
+          test -f ~/fw-AC79_AIoT_SDK/cpu/wl82/tools/uboot.boot
+
+      - name: Compilar
+        run: ./build.sh
+
+      - name: Guardar firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ github.sha }}
+          path: |
+            build/felucca.fwsc
+            build/felucca.bin
+            build/loader/ota.bin
+          if-no-files-found: error
