@@ -56,6 +56,8 @@ static void cb_theme(void)
     cbu.dim = cb_rgb(c, 5);
     cbu.bg = 0;
     ux.bg = ux.surf = 0;                 /* (los textos de gfx.c se mezclan con el fondo del lienzo) */
+    ux.mono = 0;                         /* (el ajuste de Felucca de interfaz en grises, si quedó guardado en el FM-1,
+                                          * pintaba los textos en gris y no en el color elegido) */
     cbu.dirty = 7;
 }
 
