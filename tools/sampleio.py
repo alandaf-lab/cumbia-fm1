@@ -288,7 +288,7 @@ def user_slot(name, zones):
         if z["lo"] is None:
             z["lo"], z["hi"] = lo, hi
     rate = int(round(SLOT_RATE / 44100 * 65536))
-    zb = b"".join(struct.pack("<5I2h4B", z["off"], z["n"], z["ls"], z["le"], rate, z["root"] * 16, z["pred"],
+    zb = b"".join(struct.pack("<5I2h4B", z["off"], z["n"], z["ls"], z["le"], rate, int(round(z["root"] * 16)), z["pred"],
                               z["idx"], z["lo"], z["hi"], 0) for z in zs)
     nm = re.sub(r"[^\x20-\x7E]", "", name.upper())[:8].encode().ljust(8, b"\0")
     hdr = struct.pack("<IHBB8sII8x", 0x504D5346, 1, len(zs), 0, nm, len(data), zlib.crc32(data)) + zb

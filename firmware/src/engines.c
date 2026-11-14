@@ -2,6 +2,9 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Engine table (order = PRESETS browsing order and the engine numbers of the editor protocol), the
  * factory patterns (SAVE > PHRASES) and the parts' sounds at power-on. */
+#ifndef CUMBIA_LEAN
+#define CUMBIA_LEAN 1
+#endif
 #include "../engines/src/dsp.c"   /* Felucca-Engines (MIT): the shared DSP blocks */
 
 /* The parts' engine memory (1.5): a part plays one engine at a time, so the engines with large per-part state
@@ -56,6 +59,14 @@ static const engine_t *const ENGINES[NENGINES] = {
 #else
     &ENG_FM4_GONE,               /* 1: reserved (DIGITAL, retired: its sounds convert to FM6, fm4_convert.c) */
 #endif
+#if CUMBIA_LEAN                  /* cumbia: solo ANALOG (el bajo), SAMPLE (acordeón, kit, gritos) y DRUM; los demás, vacíos
+                                  * (sus números se quedan: proyectos y el editor) */
+    &ENG_FM4_GONE, &ENG_FM4_GONE,                       /* 2 PHASE, 3 LOFI */
+    &ENG_SAMPLE,                 /* 4 */
+    &ENG_FM4_GONE, &ENG_FM4_GONE, &ENG_FM4_GONE, &ENG_FM4_GONE, &ENG_FM4_GONE,   /* 5 VOICE .. 9 PHYS */
+    &ENG_DRUM,                   /* 10 (ENGI_DRUM) */
+    &ENG_FM4_GONE, &ENG_FM4_GONE,                       /* 11 NOISE, 12 FM6 */
+#else
     &ENG_PHASE,                  /* 2 */
     &ENG_LOFI,                   /* 3 */
     &ENG_SAMPLE,                 /* 4 */
@@ -67,6 +78,7 @@ static const engine_t *const ENGINES[NENGINES] = {
     &ENG_DRUM,                   /* 10 (ENGI_DRUM) */
     &ENG_NOISE,                  /* 11 */
     &ENG_FM6,                    /* 12 (ENGI_FM6) */
+#endif
 #if FELUCCA_SLICE
     &ENG_SLICE,                  /* 13 (FELUCCA_SLICE=0 builds without it) */
 #endif

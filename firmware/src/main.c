@@ -112,7 +112,7 @@ static void fm1_main(void)
     settings_init();
     usb_serial_apply();                                 /* (#67: the saved USB SERIAL before usb_start) */
     lcd_init();
-    draw_splash();                                      /* ui_draw.c (1.1.5) */
+    cb_splash();                                        /* cumbia_ui.c: el logo */
     if (felucca_dbg.magic != DBG_MAGIC) {
         memset(&felucca_dbg, 0, sizeof felucca_dbg);
         felucca_dbg.magic = DBG_MAGIC;
@@ -157,12 +157,12 @@ static void fm1_main(void)
     }
     autosave_boot(boot_clean);
     cumbia_tracks();                          /* cumbia.c: las pistas de la cumbia, aunque la sesión guardada traiga otras */                /* (1.2) the last session's music, under the splash */
-    for (ms = 0; ms < 400u; ms += 10u) {      /* the splash; the pot followed (MIDI IN plays under it) */
+    for (ms = 0; ms < 1500u; ms += 10u) {   /* (el logo de la cumbia: 1.5 s) */      /* the splash; the pot followed (MIDI IN plays under it) */
         fm1_delay_ms(10);
         master_poll();
     }
     kb_boot_hold = 0;
-    lcd_fill(0, 0, 240, 240, T_BG);
+    cb_ui_boot();                              /* (la pantalla de la cumbia, entera) */
     scrn.idle = fm1_ms;                        /* (MENU > SCREEN OFF: from here) */
 
     for (;;) {
@@ -257,15 +257,14 @@ static void fm1_main(void)
         felucca_dbg.page = ui.page;
         felucca_dbg.home = ui.home;
         felucca_dbg.stage = 1;
-        ui_input();
+        cb_ui_input();                                /* cumbia_ui.c: la interfaz de la cumbia */
         settings_poll();                              /* queued settings save: only while stopped */
-        autosave_poll();                              /* (1.2) the music, stopped and idle: project.c */
         felucca_dbg.stage = 2;
-        ui_leds();
-        ui_draw();
+        cb_ui_leds();
+        cb_ui_draw();
         felucca_dbg.stage = 9;
         while (fm1_ms - m < 15u) {                               /* ~60 UI frames/s at most */
-            ui_input();
+            cb_ui_input();
 #if FELUCCA_OTA
             ed_service();                       /* editor replies without waiting for the next frame */
 #endif

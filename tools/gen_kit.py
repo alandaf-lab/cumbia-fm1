@@ -38,12 +38,30 @@ def one(name):
     return y
 
 
+def boombap():
+    """bombo y tarola del boom bap, sintetizados como en el prototipo (un poco opacos y saturados)"""
+    sr = sio.SLOT_RATE
+    rng = np.random.default_rng(7)
+    t = np.arange(int(.45 * sr)) / sr
+    f = 46 + (150 - 46) * np.exp(-t / .03)
+    k = np.sin(2 * np.pi * np.cumsum(f) / sr) * np.minimum(1, t / .003) * np.exp(-np.maximum(0, t - .04) / .09)
+    t = np.arange(int(.3 * sr)) / sr
+    nz = rng.uniform(-1, 1, len(t))
+    from scipy.signal import butter, lfilter
+    b, a = butter(2, [1300 / (sr / 2), 2600 / (sr / 2)], "band")
+    sn = lfilter(b, a, nz) * 2.2 * np.exp(-np.maximum(0, t - .01) / .06) + \
+        .6 * (2 * np.abs(2 * ((185 * t) % 1) - 1) - 1) * np.exp(-t / .03)
+    sat = lambda x: np.tanh(1.8 * x) / np.tanh(1.8)
+    return [sat(k) * .95, sat(sn / np.abs(sn).max()) * .8]   # (el hat: la güira corta; 16 zonas a lo más)
+
+
 def build():
     ys = [one(n) for n, _ in INST]
     g = 30000 / max(np.abs(y).max() for y in ys)          # un solo factor: se respeta el balance del prototipo
+    ys = [y * g / 30000 for y in ys] + boombap()          # (y el boom bap a su nivel: GI_KICK, GI_SNARE)
     zones = []
     for i, y in enumerate(ys):
-        s = [int(v) for v in np.clip(np.round(y * g), -32768, 32767)]
+        s = [int(v) for v in np.clip(np.round(y * 30000), -32768, 32767)]
         zones.append((s, KEY0 + i, KEY0 + i, KEY0 + i))
     return sio.user_slot("CUMBIA", zones)
 
@@ -57,4 +75,4 @@ if __name__ == "__main__":
         "/* tools/gen_kit.py: la ranura USR1 con la percusión (cabecera 480 B, luego el ADPCM) */\n"
         "const KIT_PERC = {name: 'CUMBIA', hdr: '%s',\n  data: '%s'};\n"
         % (base64.b64encode(hdr).decode(), base64.b64encode(data).decode()))
-    print(f"kit: {len(INST)} zonas, {len(data)} B de {sio.SLOT_MAX_DATA}")
+    print(f"kit: {len(INST) + 2} zonas, {len(data)} B de {sio.SLOT_MAX_DATA}")

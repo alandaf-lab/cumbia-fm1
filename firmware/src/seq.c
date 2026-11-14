@@ -807,11 +807,18 @@ static __attribute__((noinline)) void kb_lat(uint32_t k)
 }
 #endif
 
+static void cumbia_keys(uint32_t cur, uint32_t ch);   /* cumbia.c */
 static void keyboard_block(void)
 {
     uint32_t cur = fm1_in.notes, ch, k;
     uint32_t lay, fx, mute;
     ch = cur ^ kb_prev;                          /* keys also sound while entering steps */
+    if (!kb_boot_hold) {                         /* cumbia: el teclado es el acordeón y los gritos */
+        if (ch)
+            cumbia_keys(cur, ch);
+        kb_prev = cur;
+        return;
+    }
     if (perf_remap)
         perf_key_remap();
     if (!ch)

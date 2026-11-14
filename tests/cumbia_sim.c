@@ -19,19 +19,27 @@ int main(int argc, char **argv)
         host_preset(&trk[i], TRK_DEF[i][0], TRK_DEF[i][1]);
         trk[i].p[P_LEVEL] = CB_LEVEL[i];
     }
-    if (getenv("KIT")) {
-        FILE *a = fopen("build/kit_perc.hdr", "rb"), *b = fopen("build/kit_perc.bin", "rb");
-        if (!a || !b || !fread(host_slots[0], 1, 512, a) || !fread(host_slots[0] + 512, 1, sizeof host_slots[0] - 512, b))
-            return 1;
-        fclose(a);
-        fclose(b);
-        smp_user_scan(0);
-        host_preset(&trk[CB_PERC], ENGI_SAMPLE, 0);
-        trk[CB_PERC].p[P_LEVEL] = CB_LEVEL[CB_PERC];
+    {                                         /* USR1 el kit, USR2 los gritos (tools/gen_kit.py, gen_gritos.py) */
+        static const char *const F[2][2] = {{"build/kit_perc.hdr", "build/kit_perc.bin"}, {"build/gritos.hdr", "build/gritos.bin"}};
+        for (i = 0; i < 2u && !getenv("NOKIT"); i++) {
+            FILE *a = fopen(F[i][0], "rb"), *b = fopen(F[i][1], "rb");
+            if (!a || !b || !fread(host_slots[i], 1, 512, a) || !fread(host_slots[i] + 512, 1, sizeof host_slots[i] - 512, b))
+                return 1;
+            fclose(a);
+            fclose(b);
+            smp_user_scan(i);
+        }
+        for (i = 0; i < NPART; i++)
+            trk[i].p[P_SLCR] = 0;
         cb_perc_setup();
-        printf("kit: %u zonas\n", usr_nz[0]);
+        cb_sends();
+        printf("kit: %u zonas, gritos: %u\n", usr_nz[0], usr_nz[1]);
     }
-    cb_next_seed = seed;
+    if (getenv("REB")) cbc.reb = (uint8_t)atoi(getenv("REB"));
+    if (getenv("BB")) cbc.bb = 1;
+    if (getenv("KEY")) cbc.key = (uint8_t)atoi(getenv("KEY"));
+    cb_tn = CB_KEYS[cbc.key] - 3;
+    cb_generate(seed);
     if (getenv("SOLO"))                       /* SOLO=k: solo la pista k (0..3) */
         for (i = 0; i < NPART; i++)
             trk[i].p[P_LEVEL] = i == (uint32_t)atoi(getenv("SOLO")) ? trk[i].p[P_LEVEL] : 0;
@@ -44,6 +52,12 @@ int main(int argc, char **argv)
     wav_hdr(w, FS * secs);
     for (f = 0; f < FS * secs; f += CTL) {
         uint32_t v = 0, p, k;
+        if (getenv("GRITOS") && f >= FS * 6u && f % (FS * 4u) < CTL)   /* GRITOS: uno cada 4 s desde el segundo 6 */
+            cb_grito((f / (FS * 4u)) % CB_NVOZ);
+        if (getenv("CINTA"))                  /* CINTA=s: la cinta para atrás de s a s + 1.5 */
+            cbc.cinta = f >= FS * (uint32_t)atoi(getenv("CINTA")) && f < FS * (uint32_t)atoi(getenv("CINTA")) + FS * 3u / 2u;
+        if (getenv("ECO"))
+            cbc.eco = 1, cb_sends();
         mix_block(o, CTL);
         for (p = 0; p < NPART; p++) {
             uint32_t pv = 0;
@@ -61,7 +75,7 @@ int main(int argc, char **argv)
         }
     }
     fclose(w);
-    printf("máx por pista: acordeón %u, bajo %u, percusión %u, acordes %u; bloques con las 8 voces ocupadas: %u%%\n", pmax[0], pmax[1], pmax[2], pmax[3], full * 100u / blocks);
-    printf("voces a la vez (máx): %u, muestras saturadas: %u, al final tocando: %u\n", vmax, clips, cb_play);
+    printf("máx por pista: acordeón %u, bajo %u, percusión %u, gritos %u; bloques con las 8 voces ocupadas: %u%%\n", pmax[0], pmax[1], pmax[2], pmax[3], full * 100u / blocks);
+    printf("voces a la vez (máx): %u, muestras saturadas: %u, al final tocando: %u; TUNE %d, BPM %d, paso %u\n", vmax, clips, cb_play, song.g[G_TUNE], song.g[G_BPM], cb_step);
     return 0;
 }

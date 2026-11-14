@@ -807,6 +807,7 @@ static __attribute__((noinline)) void track_insert(track_t *t, int32_t *b, uint3
 /* one block of the whole mix (shared with hostsim.c): events -> each part (with its modulation matrix)
  * -> dist -> INSERT -> SLICER -> level / pan / sends -> buses -> master; out: stereo Q15 */
 static void events_block(uint32_t n);                    /* seq.c */
+static void cumbia_post(int32_t *l, int32_t *r, int32_t *wet, uint32_t n);   /* cumbia.c */
 #if FELUCCA_CPU2
 static int32_t wet[CTL];                                 /* (the dry mix and the sends: mx[0], above) */
 #else
@@ -1072,6 +1073,7 @@ static void mix_block(int32_t *out, uint32_t n)
     fx_buses(send_c, send_d, send_r, wet, n);
     if (hl.side)
         rev_side_mix(mix_l, mix_r, n);                  /* HALL: stereo */
+    cumbia_post(mix_l, mix_r, wet, n);                  /* cumbia.c: el color de la rebajada, la cinta para atrás */
     if (scope_mix)
         scope_take_mix(n);
     if (perf) {
