@@ -66,7 +66,7 @@ jobs:
         run: |
           ~/.jieli/toolchain/common/bin/objdump -t build/felucca.elf \
             | awk 'NF>=5 && $(NF-2) !~ /\*/ {printf "%d %s %s\n", strtonum("0x"$(NF-1)), $(NF-2), $NF}' \
-            | sort -rn | head -120
+            | sort -rn > build/simbolos.txt; head -40 build/simbolos.txt; awk '$2==".text"{t+=$1} END{print "TEXT total", t}' build/simbolos.txt
 
       - name: Guardar firmware
         uses: actions/upload-artifact@v4
@@ -76,6 +76,7 @@ jobs:
             build/felucca.fwsc
             build/felucca.bin
             build/loader/ota.bin
+            build/simbolos.txt
           if-no-files-found: error
 
       - name: Armar el instalador web
