@@ -11,9 +11,14 @@ int main(int argc, char **argv)
     int32_t o[2 * CTL];
     uint32_t vmax = 0, clips = 0, pmax[NPART] = {0}, full = 0, blocks = 0;
     host_tracks_init();
-    for (i = 0; i < NPART; i++)
+    for (i = 0; i < NPART; i++) {
         host_preset(&trk[i], TRK_DEF[i][0], TRK_DEF[i][1]);
+        trk[i].p[P_LEVEL] = CB_LEVEL[i];
+    }
     cb_next_seed = seed;
+    if (getenv("SOLO"))                       /* SOLO=k: solo la pista k (0..3) */
+        for (i = 0; i < NPART; i++)
+            trk[i].p[P_LEVEL] = i == (uint32_t)atoi(getenv("SOLO")) ? trk[i].p[P_LEVEL] : 0;
     seq_start();
     printf("canción %u: %u BPM, bajo %s, %u secciones, %u pasos, %u eventos\n", cb.seed, cb.bpm, cb.bass ? "dub" : "tumbao",
            cb.nsec, cb.start[cb.nsec], cb_nev);

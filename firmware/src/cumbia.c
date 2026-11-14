@@ -420,7 +420,7 @@ static void acc_chord(cb_ch_t c, int32_t at, uint32_t len, int stac, int32_t v, 
         int32_t m = CB_TN + (c.root + CB_CHORD[c.type][k]) % 12;
         if (m < CB_TN + 2)
             m += 12;                                          /* entre la 2a y la 14a sobre la tónica */
-        note(CB_ACORDES, m, at + (int32_t)k * (int32_t)FS / 166, dur, vel_of(v * 62 / 100));
+        note(CB_ACORDES, m, at + (int32_t)k * (int32_t)FS / 166, dur, vel_of(v * 80 / 100));
     }
     if (bajo) {
         int32_t d4 = (int32_t)(4u * sd);
@@ -505,12 +505,13 @@ static void cb_play_step(uint32_t g)
         for (k = CB_GROOVE_IDX[gs]; k < CB_GROOVE_IDX[gs + 1u]; k++) {
             const cb_hit_t *h = &CB_GROOVE[k];
             if (inst_ok(h->inst, s->perc))
-                note(CB_PERC, GI_NOTE[h->inst], (int32_t)((uint32_t)h->frac * sd / 256u), (int32_t)sd, h->vel);
+                note(CB_PERC, GI_NOTE[h->inst], (int32_t)((uint32_t)h->frac * sd / 256u), (int32_t)sd, h->vel * 3 / 2);
         }
     }
 }
 
 /* -------------------------------------------------------- transporte --- */
+static const int16_t CB_LEVEL[NPART] = {116, 88, 120, 104};   /* acordeón, bajo, percusión, acordes */
 static void set_engine_of(track_t *t, uint32_t ei);         /* ui.c */
 static void apply_preset_to(track_t *t, uint32_t pi);
 static void track_defaults_steps(track_t *t);
@@ -525,6 +526,7 @@ static void cumbia_tracks(void)          /* las cuatro pistas con los sonidos de
             apply_preset_to(t, TRK_DEF[i][1]);
         }
         t->p[P_MUTE] = 0;
+        t->p[P_LEVEL] = CB_LEVEL[i];      /* la mezcla del prototipo: acordeón al frente, percusión presente */
         track_defaults_steps(t);          /* sin patrones guardados: suena solo la canción */
     }
 }
