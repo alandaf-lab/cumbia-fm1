@@ -52,7 +52,7 @@ def boombap():
     sn = lfilter(b, a, nz) * 2.2 * np.exp(-np.maximum(0, t - .01) / .06) + \
         .6 * (2 * np.abs(2 * ((185 * t) % 1) - 1) - 1) * np.exp(-t / .03)
     sat = lambda x: np.tanh(1.8 * x) / np.tanh(1.8)
-    return [sat(k) * .95, sat(sn / np.abs(sn).max()) * .8]   # (el hat: la güira corta; 16 zonas a lo más)
+    return [sat(k * 1.6) * .98, sat(sn / np.abs(sn).max() * 1.4) * .95]   # más saturados: más cuerpo   # (el hat: la güira corta; 16 zonas a lo más)
 
 
 def build():

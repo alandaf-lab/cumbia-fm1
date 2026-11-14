@@ -214,6 +214,8 @@ static void cb_ui_input(void)
                 perf_k[0] = (int8_t)(h ? -80 : 0);
             else
                 perf_press(CB_PUSH[k].pf, h);
+            if (CB_PUSH[k].pf == PF_ETHR)        /* eco a todo: la repetición más presente mientras se mantiene */
+                song.g[G_DMIX] = (int16_t)(h ? 127 : 90);
             if (h)
                 cb_say(CB_PUSH[k].name);
             cbu.dirty |= 2;
@@ -397,7 +399,7 @@ static void cb_draw_panel(void)
     cv_begin(240, 122, 0);
     cb_spr(4, 33, SPR_ACORDEON_0 + cbu.card_l, cbu.ramp);
     if (cbc.bb)
-        cb_spr(88, 13, SPR_DJ_0 + cbu.dancer % 4u, cbu.ramp);
+        cb_spr(78, 19, SPR_DJ_0 + cbu.dancer % 4u, cbu.ramp);   /* (84 x 90: del tamaño del bailarín) */
     else
         cb_spr(88, 13, SPR_BAILARIN_0 + cbu.dancer % 8u, cbc.cinta ? cbu.rdim : cbu.ramp);
     cb_spr(164, 33, cbu.rkind + cbu.card_r, cbu.ramp);

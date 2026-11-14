@@ -19,12 +19,16 @@ sys.path.insert(0, str(ROOT / "tools"))
 import sampleio as sio  # noqa: E402
 
 GRITOS = [("wepa_C", 62.6), ("cumbia_C", 54.6), ("opa_C", 69.5), ("abailar_C", 60.7), ("mty_C", 48.0)]   # = cumbia.c CB_VOZ_M0
-GRITOS2 = [("weweaa", 0), ("pagozar", 0), ("ave", 0)]   # USR3: frases nuevas (3 semitonos abajo, como la voz C)
+GRITOS2 = [("weweaa", 0), ("pagozar", 0), ("ave", 0)]
+BOOST = {"weweaa": 1.4}                  # (al oído, un poco abajo de las demás: +3 dB)
+COMP = {"weweaa": 2.5}                   # comprimida (tanh): más fuerte sin pasarse del pico   # USR3: frases nuevas (3 semitonos abajo, como la voz C)
 
 
 def one(name):
     sr, x = sio.read_any_wav(ROOT / "assets/voz" / f"{name}.wav")
     x = np.asarray(x, dtype=np.float64)
+    if name in COMP:
+        x = np.tanh(COMP[name] * x / np.abs(x).max()) / np.tanh(COMP[name])
     from math import gcd
     g = gcd(sio.SLOT_RATE, sr)
     y = resample_poly(x, sio.SLOT_RATE // g, sr // g)
@@ -44,7 +48,7 @@ def build(lst, name, g=None, like=None):
     ys = [one(n) for n, _ in lst]
     g = g or 30000 / max(np.abs(y).max() for y in ys)
     if like:
-        ys = [y * min(like / (rms(y) * g), 30000 / (np.abs(y).max() * g)) for y in ys]
+        ys = [y * min(like / (rms(y) * g) * BOOST.get(n, 1), 30000 / (np.abs(y).max() * g)) for y, (n, _) in zip(ys, lst)]
     zones = []
     for i, ((_, m0), y) in enumerate(zip(lst, ys)):
         s = [int(v) for v in np.clip(np.round(y * g), -32768, 32767)]
