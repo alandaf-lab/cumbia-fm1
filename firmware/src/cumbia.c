@@ -589,7 +589,7 @@ static void cb_levels(void)              /* los niveles de las pistas (el boom b
     for (i = 0; i < NPART; i++) {
         uint32_t v = cb_mix[i];
         if (i == CB_PERC && cbc.bb)
-            v = v * 7u / 5u;              /* el boom bap con impacto: +3 dB más */
+            v = v * 11u / 10u;            /* el boom bap con impacto, a medio camino (+3 dB fue demasiado) */
         trk[i].p[P_LEVEL] = (int16_t)(v > 127u ? 127u : v);
     }
 }
