@@ -575,7 +575,7 @@ static void cb_play_step(uint32_t g)
         for (k = CB_GROOVE_IDX[gs]; k < CB_GROOVE_IDX[gs + 1u]; k++) {
             const cb_hit_t *h = &CB_GROOVE[k];
             if (cbc.bb ? h->inst <= GI_CONGA2 || h->inst == GI_GUIRO_L || h->inst == GI_GUIRO_S : inst_ok(h->inst, s->perc))
-                perc_hit(h->inst, (int32_t)((uint32_t)h->frac * sd / 256u), cbc.bb ? h->vel * 4 / 10 : h->vel * 3 / 2);
+                perc_hit(h->inst, (int32_t)((uint32_t)h->frac * sd / 256u), cbc.bb ? h->vel * 3 / 10 : h->vel * 3 / 2);   /* (con el boom bap, la cumbia detrás) */
         }
     }
 }
@@ -588,6 +588,8 @@ static void cb_levels(void)              /* los niveles de las pistas (el boom b
     uint32_t i;
     for (i = 0; i < NPART; i++) {
         uint32_t v = cb_mix[i];
+        if (i == CB_PERC && cbc.bb)
+            v = v * 7u / 5u;              /* el boom bap con impacto: +3 dB más */
         trk[i].p[P_LEVEL] = (int16_t)(v > 127u ? 127u : v);
     }
 }
