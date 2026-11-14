@@ -491,8 +491,9 @@ static void perc_hit(uint32_t inst, int32_t at, int32_t vel)
     note(CB_PERC, (int32_t)m, at, (int32_t)(cb_kit ? cb_len16 / 4u : cb_len16), vel);
     cb_hits |= 1u << inst;
 }
-static const uint8_t CB_BB_K[2][4][2] = {{{0, 120}, {7, 96}, {10, 108}}, {{0, 120}, {3, 72}, {10, 108}, {11, 60}}};
-static const uint8_t CB_BB_S[4][2] = {{4, 112}, {12, 112}, {9, 20}, {15, 25}};   /* 2 y 4, y los fantasmas */
+static const uint8_t CB_BB_K[2][4][2] = {{{0, 107}, {7, 85}, {10, 96}}, {{0, 107}, {3, 64}, {10, 96}, {11, 53}}};   /* (el boom bap
+                                                         * suena con la misma energía que la percusión de cumbia) */
+static const uint8_t CB_BB_S[4][2] = {{4, 100}, {12, 100}, {9, 18}, {15, 22}};   /* 2 y 4, y los fantasmas */
 
 static void cb_play_step(uint32_t g)
 {
@@ -582,13 +583,11 @@ static void cb_play_step(uint32_t g)
 /* -------------------------------------------------------- transporte --- */
 static const int16_t CB_LEVEL[NPART] = {116, 88, 92, 112};   /* acordeón, bajo, percusión, gritos */
 static uint8_t cb_mix[NPART] = {116, 88, 92, 112};           /* la mezcla (GLO: cumbia_ui.c) */
-static void cb_levels(void)              /* los niveles de las pistas; con el boom bap la batería sube */
+static void cb_levels(void)              /* los niveles de las pistas (el boom bap, al mismo nivel que la cumbia) */
 {
     uint32_t i;
     for (i = 0; i < NPART; i++) {
         uint32_t v = cb_mix[i];
-        if (i == CB_PERC && cbc.bb)
-            v = v * 3u / 2u;
         trk[i].p[P_LEVEL] = (int16_t)(v > 127u ? 127u : v);
     }
 }
@@ -740,37 +739,28 @@ static void cumbia_stop(void)
 }
 
 /* ------------------------------------------------------------- gritos --- */
-/* tools/gen_gritos.py: USR2 los gritos (la voz C; USR3 queda para frases nuevas). El grito j de una ranura en las
- * teclas R - 10 .. R + 9, R = 12 + 20 j, su altura natural (CB_VOZ_M0, redondeada) en R; la fracción de semitono va en
- * la raíz de la zona. Se afina a la tónica o la quinta más cercana: dentro del tono */
-#define CB_NVOZ 5u
-static const uint8_t CB_VOZ_M0[CB_NVOZ] = {63, 55, 70, 61, 48};   /* wepa, cumbia, opa, a bailar, Monterrey (= round() de
-                                                                   * gen_gritos.py) */
+/* tools/gen_gritos.py: USR2 los cinco gritos autorizados, USR3 las frases nuevas. El grito j de una ranura suena tal
+ * como se grabó en la tecla 12 + 20 j (la rebajada lo frena con todo lo demás) */
+#define CB_NVOZ 8u                       /* wepa, cumbia, opa, a bailar, Monterrey; wewea, pagozar, ave */
 static volatile uint8_t cb_grito_on;     /* el último grito disparado + 1 (cumbia_ui.c: el micrófono) */
 static void cb_grito(uint32_t i)         /* contexto de audio (keyboard_block) */
 {
-    int32_t best = 0, bd = 99, m, at = 0;
+    int32_t at = 0, m;
     uint32_t slot, j;
     if (!cb_voz)
         return;
-    i %= CB_NVOZ;                        /* (las teclas de arriba repiten los cinco, hasta que haya frases nuevas) */
-    slot = 1u;
-    j = i;
-    for (m = 30; m < 90; m++) {
-        int32_t pc = ((m - cb_tn) % 12 + 12) % 12, d = m - CB_VOZ_M0[i];
-        d = d < 0 ? -d : d;
-        if ((pc == 0 || pc == 7) && d < bd) {
-            bd = d;
-            best = m;
-        }
-    }
+    i %= CB_NVOZ;
+    if (i >= 5u && !usr_nz[2])
+        i -= 5u;                          /* (sin USR3: los de USR2) */
+    slot = i < 5u ? 1u : 2u;
+    j = i < 5u ? i : i - 5u;
     if (cb_play) {                       /* en la siguiente corchea */
         at = (int32_t)(cb_len16 > cb_pos ? cb_len16 - cb_pos : 0);
         if (cb_step % 2u)
             at += (int32_t)cb_len16;
     }
-    m = 12 + 20 * (int32_t)j + best - CB_VOZ_M0[i];
-    if (cb_nq + 2u <= CB_NQ && m >= 0 && m < 128) {
+    m = 12 + 20 * (int32_t)j;
+    if (cb_nq + 2u <= CB_NQ) {
         cb_q[cb_nq++] = (cb_q_t){at, CB_VOZ, (uint8_t)m, 110, (uint8_t)slot};   /* (gen de un note-on: la ranura) */
         q_put(at + (int32_t)FS * 3, CB_VOZ, m, 0);
     }
@@ -779,7 +769,7 @@ static void cb_grito(uint32_t i)         /* contexto de audio (keyboard_block) *
 
 /* ---------------------------------------------------- teclado del FM-1 --- */
 /* las teclas blancas tocan el acordeón en la escala de la canción (menor natural desde la tónica); las negras, los
- * gritos (los cinco en las negras de abajo, y de nuevo en las de arriba). Contexto de audio (seq.c keyboard_block) */
+ * gritos (los ocho en orden, de abajo hacia arriba, y de nuevo). Contexto de audio (seq.c keyboard_block) */
 static const uint8_t CB_KB_WHITE[27] = {0, 0xFF, 1, 0xFF, 2, 0xFF, 3, 4, 0xFF, 5, 0xFF, 6, 7, 0xFF, 8, 0xFF, 9, 0xFF, 10, 11,
     0xFF, 12, 0xFF, 13, 14, 0xFF, 15};
 static const uint8_t CB_KB_BLACK[27] = {0, 1, 0, 2, 0, 3, 0, 0, 4, 0, 5, 0, 0, 6, 0, 7, 0, 8, 0, 0, 9, 0, 10, 0, 0, 11, 0};
@@ -895,7 +885,7 @@ static void cumbia_post(int32_t *l, int32_t *r, int32_t *wet, uint32_t n)
         2608, 2526, 2445, 2368, 2293, 2220, 2150, 2081, 2015, 1951, 1890, 1830, 1772, 1715, 1661, 1608, 1557, 1508, 1460,
         1414, 1369, 1325, 1283, 1243, 1203, 1165, 1128};
     int32_t lg = (int32_t)LO[pc > 40u ? 40u : pc] - 4096, hg = HI[pc > 40u ? 40u : pc];
-    if (cbc.cinta && !cr_on) {
+    if (cbc.cinta && !cr_on && !sl_lent) {
         cr_on = 1;
         cr_rd = ((cr_w - 1u) & (CR_N - 1u)) << 16;
         cr_spd = 16384;                                       /* 0.25 */
@@ -910,7 +900,7 @@ static void cumbia_post(int32_t *l, int32_t *r, int32_t *wet, uint32_t n)
                        (int32_t)(((int64_t)cr_lo[c] * lg) >> 12);
             }
         }
-        if (!cr_on) {
+        if (!cr_on && !sl_lent) {            /* (sl_buf prestado a los efectos push de perform.c: no se graba) */
             cr_acc += (x[0] + x[1]) >> 1;
             if (++cr_k == 4u) {
                 buf[cr_w] = cr_mulaw(cr_acc >> 4);
@@ -931,8 +921,9 @@ static void cumbia_post(int32_t *l, int32_t *r, int32_t *wet, uint32_t n)
                 if (cr_spd < 65536u)
                     cr_spd += 7;                              /* 0.25 -> 1 en ~150 ms */
             } else {
-                cr_g -= cr_g >> 9;                            /* ~12 ms */
-                cr_main += (32767 - cr_main) >> 9;
+                cr_g -= (cr_g >> 9) + 1;                      /* ~12 ms (+1: llega a 0, no se queda sonando quedito) */
+                cr_main += ((32767 - cr_main) >> 9) + 1;
+                cr_main = cr_main > 32767 ? 32767 : cr_main;
                 if (cr_g < 64) {
                     cr_on = 0;
                     cr_g = 0;

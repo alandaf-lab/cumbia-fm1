@@ -70,6 +70,17 @@ int main(int argc, char **argv)
             cbc.cinta = f >= FS * (uint32_t)atoi(getenv("CINTA")) && f < FS * (uint32_t)atoi(getenv("CINTA")) + FS * 3u / 2u;
         if (getenv("STOP") && f / CTL == FS * (uint32_t)atoi(getenv("STOP")) / CTL)   /* STOP=s: el transporte para */
             seq_stop();
+        if (getenv("PUSH")) {                 /* PUSH=e: el efecto e de perform.c (100 = ahogada) de 10 a 12 s */
+            static int on;
+            int want = f >= FS * 10u && f < FS * 12u, e = atoi(getenv("PUSH"));
+            if (want != on) {
+                on = want;
+                if (e == 100)
+                    perf_k[0] = (int8_t)(on ? -80 : 0);
+                else
+                    perf_press((uint32_t)e, on);
+            }
+        }
         if (getenv("ECO"))
             cbc.eco = 1, cb_sends();
         mix_block(o, CTL);

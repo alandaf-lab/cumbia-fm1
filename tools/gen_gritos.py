@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import sampleio as sio  # noqa: E402
 
 GRITOS = [("wepa_C", 62.6), ("cumbia_C", 54.6), ("opa_C", 69.5), ("abailar_C", 60.7), ("mty_C", 48.0)]   # = cumbia.c CB_VOZ_M0
-GRITOS2 = []                             # USR3: para frases nuevas (vacío: el instalador no la toca)
+GRITOS2 = [("weweaa", 0), ("pagozar", 0), ("ave", 0)]   # USR3: frases nuevas (3 semitonos abajo, como la voz C)
 
 
 def one(name):
@@ -42,15 +42,16 @@ def build(lst, name, g=None):
     for i, ((_, m0), y) in enumerate(zip(lst, ys)):
         s = [int(v) for v in np.clip(np.round(y * g), -32768, 32767)]
         r = 12 + 20 * i                                   # = cumbia.c cb_grito
-        zones.append((s, r + (m0 - round(m0)), r - 10, r + 9))
+        zones.append((s, r, r - 10, r + 9))               # tal como se grabó: la tecla R, sin afinar
     return sio.user_slot(name, zones), g
 
 
 if __name__ == "__main__":
     (ROOT / "build").mkdir(exist_ok=True)
     (hdr, data), g = build(GRITOS, "GRITOS")
+    (hdr2, data2), _ = build(GRITOS2, "GRITOS2", g)       # el mismo nivel que los otros
     js = "/* tools/gen_gritos.py: USR2 los gritos de la voz C, USR3 los de las voces A y B (cabecera 480 B, el ADPCM) */\n"
-    for nm, var, h, d in (("GRITOS", "GRITOS", hdr, data),):
+    for nm, var, h, d in (("GRITOS", "GRITOS", hdr, data), ("GRITOS2", "GRITOS2", hdr2, data2)):
         (ROOT / f"build/{nm.lower()}.hdr").write_bytes(h)
         (ROOT / f"build/{nm.lower()}.bin").write_bytes(d)
         js += "const %s = {name: '%s', hdr: '%s',\n  data: '%s'};\n" % (var, nm, base64.b64encode(h).decode(),

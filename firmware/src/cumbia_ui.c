@@ -9,6 +9,9 @@
  *          mantiene)                         SELECT  color de la pantalla
  *   SCL    boom bap sí / no
  *   LFO    eco de sonidero en los gritos sí / no
+ *   GLO    la mezcla (KNOB 1..4: acordeón, bajo, percusión, gritos); otra vez, regresa
+ *   ENV    ahogada (mantenido)     EDIT freno (mantenido)
+ *   ARP    repetición (mantenido)  SEQ  eco a todo (mantenido)
  * Teclado: las blancas tocan el acordeón en la escala de la canción, las negras los gritos (cumbia.c cumbia_keys).
  *
  * Pantalla 240 x 240, un solo color sobre negro (el usuario lo elige):
@@ -34,6 +37,7 @@ static struct {
     int8_t msg_t;
     char msg[24];
     uint8_t page;                        /* 0 la canción, 1 la mezcla (GLO) */
+    uint8_t push[4];                     /* los efectos push mantenidos (CB_PUSH) */
     uint16_t songs;                      /* canciones sacadas con el dado */
 } cbu = {0};
 
@@ -152,6 +156,14 @@ static void cb_dice(void)
     cbu.dice_t = 0;
     cbu.dirty |= 4;
 }
+/* efectos push (los de Felucca, perform.c), mientras se mantiene el botón */
+#define CB_LPF 0xFFu
+static const struct { uint8_t btn, pf; const char *name; } CB_PUSH[4] = {
+    {B_ENV, CB_LPF, "AHOGADA"},         /* un pasabajos fijo: la música ahogada */
+    {B_EDIT, PF_TAPE, "FRENO"},          /* la tornamesa se apaga */
+    {B_ARP, PF_R16, "REPETICION"},       /* repite el último 16avo (un octavo no cabe en el búfer abajo de 81 BPM) */
+    {B_SEQ, PF_ETHR, "ECO A TODO"},      /* toda la mezcla al eco */
+};
 static void cb_ui_input(void)
 {
     uint32_t pressed = fm1_input_edges(0), held = fm1_in.buttons;
@@ -189,6 +201,23 @@ static void cb_ui_input(void)
         if (was)
             seq_start();
         cbu.dirty |= 7;
+    }
+    perf_latch_on = 0;                   /* (los efectos push solo mientras se mantienen) */
+    {
+        uint32_t k;
+        for (k = 0; k < 4u; k++) {
+            uint8_t h = (uint8_t)CB_HELD(CB_PUSH[k].btn);
+            if (h == cbu.push[k])
+                continue;
+            cbu.push[k] = h;
+            if (CB_PUSH[k].pf == CB_LPF)
+                perf_k[0] = (int8_t)(h ? -80 : 0);
+            else
+                perf_press(CB_PUSH[k].pf, h);
+            if (h)
+                cb_say(CB_PUSH[k].name);
+            cbu.dirty |= 2;
+        }
     }
     if (cbc.cinta != CB_HELD(B_FX)) {
         cbc.cinta = (uint8_t)CB_HELD(B_FX);
@@ -276,6 +305,8 @@ static void cb_ui_leds(void)
     led_put(nl, panel.btn[B_SCL], cbc.bb);
     led_put(nl, panel.btn[B_LFO], cbc.eco);
     led_put(nl, panel.btn[B_FX], cbc.cinta);
+    for (k = 0; k < 4u; k++)
+        led_put(nl, panel.btn[CB_PUSH[k].btn], cbu.push[k]);
     for (k = 0; k < 27u; k++) {
         led_put(nd, 14u + k, 1);
         led_put(nl, 14u + k, (int)((lit >> k) & 1u));
@@ -418,7 +449,7 @@ static void cb_follow(void)
     }
     /* el bailarín: un cuadro por 16avo (al revés con la cinta, quieto si para); el DJ: uno por tiempo */
     d = cbu.dancer;
-    if (song.playing) {
+    if (song.playing && !cbu.push[1]) {  /* (con el freno se queda congelado) */
         static uint32_t last;
         if (st != last) {
             if (cbc.bb) {
