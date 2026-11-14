@@ -39,6 +39,11 @@ int main(int argc, char **argv)
     if (getenv("BB")) cbc.bb = 1;
     if (getenv("KEY")) cbc.key = (uint8_t)atoi(getenv("KEY"));
     cb_tn = CB_KEYS[cbc.key] - 3;
+    {                                         /* como al encender: el audio corre antes de que haya canción */
+        int32_t ob[2 * CTL];
+        for (i = 0; i < 64u; i++)
+            mix_block(ob, CTL);
+    }
     cb_generate(seed);
     if (getenv("SOLO"))                       /* SOLO=k: solo la pista k (0..3) */
         for (i = 0; i < NPART; i++)

@@ -665,7 +665,11 @@ static void cb_rate_step(void)           /* un 16avo: se acerca al valor de la p
     int32_t d = (int32_t)cb_rate_tgt() - (int32_t)cb_rate;
     cb_rate = d > -132 && d < 132 ? cb_rate_tgt() : (uint32_t)((int32_t)cb_rate + d * 46 / 256);
 }
-static uint32_t cb_bpm_now(void) { return (uint32_t)((int32_t)cb.bpm + cbc.bpm); }
+static uint32_t cb_bpm_now(void)         /* (sin canción todavía, al encender: 80; nunca 0, es divisor) */
+{
+    int32_t b = (cb.bpm ? (int32_t)cb.bpm : 80) + cbc.bpm;
+    return (uint32_t)(b < 40 ? 40 : b);
+}
 static uint32_t cb_len16_now(void)       /* muestras por 16avo al tempo de la cinta */
 {
     uint32_t q8 = ((uint32_t)FS * 15u << 8) / cb_bpm_now();   /* Q8, a velocidad normal (sin división de 64 bits) */
