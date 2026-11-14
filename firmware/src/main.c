@@ -155,7 +155,8 @@ static void fm1_main(void)
         panel_setup();                        /* OCT- + OCT+ held at power-on */
         settings_save();
     }
-    autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
+    autosave_boot(boot_clean);
+    cumbia_tracks();                          /* cumbia.c: las pistas de la cumbia, aunque la sesión guardada traiga otras */                /* (1.2) the last session's music, under the splash */
     for (ms = 0; ms < 400u; ms += 10u) {      /* the splash; the pot followed (MIDI IN plays under it) */
         fm1_delay_ms(10);
         master_poll();

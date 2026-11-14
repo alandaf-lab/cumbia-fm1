@@ -1488,7 +1488,7 @@ static void events_block(uint32_t n)
     chain_tick(clock_mode && chain.running ? midi_seq_preview(&trk[chain.clk], seq_n) : seq_n);
     for (i = 0; i < NTRK; i++)
         seq_tick(&trk[i], seq_n);
-    cumbia_tick(seq_n);
+    cumbia_tick(n);                                /* (su propio reloj: el BPM, no el reloj MIDI) */
     if (cin_flush)
         cin_record();
     if (song.playing)

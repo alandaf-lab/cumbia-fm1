@@ -511,6 +511,23 @@ static void cb_play_step(uint32_t g)
 }
 
 /* -------------------------------------------------------- transporte --- */
+static void set_engine_of(track_t *t, uint32_t ei);         /* ui.c */
+static void apply_preset_to(track_t *t, uint32_t pi);
+static void track_defaults_steps(track_t *t);
+static void cumbia_tracks(void)          /* las cuatro pistas con los sonidos de la cumbia (aunque el proyecto guardado traiga
+                                          * otros): main.c al encender, después de restaurar la última sesión (contexto de la UI) */
+{
+    uint32_t i;
+    for (i = 0; i < NPART; i++) {
+        track_t *t = &trk[i];
+        if (t->eng_req != TRK_DEF[i][0] || t->preset != TRK_DEF[i][1]) {
+            set_engine_of(t, TRK_DEF[i][0]);
+            apply_preset_to(t, TRK_DEF[i][1]);
+        }
+        t->p[P_MUTE] = 0;
+        track_defaults_steps(t);          /* sin patrones guardados: suena solo la canción */
+    }
+}
 static void cumbia_start(void)
 {
     cb_all_off();
