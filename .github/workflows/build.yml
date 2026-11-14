@@ -58,6 +58,8 @@ jobs:
           test -f ~/fw-AC79_AIoT_SDK/cpu/wl82/tools/uboot.boot
 
       - name: Compilar
+        env:
+          FELUCCA_SLICE: '0'   # sin el motor SLICE ni su BREAK: espacio para el acordeón
         run: ./build.sh
 
       - name: Guardar firmware

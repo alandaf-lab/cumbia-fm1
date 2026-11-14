@@ -70,8 +70,8 @@ TR = 22050                                   # stored sample rate
 # from the web editor). TRANH was removed (66 KB of flash); its index 1 stays, an alias of PIANO
 # ("alias": the set named). PERC (the GM kit) was removed (66 KB); its index 4 stays, an alias of
 # PIANO too (PERC_SLOT; its sounds load as the DRUM engine)
-CC0_SETS = [("PIANO", "oneshot"), ("PIANO", "alias"), ("ACORD", "cumbia"), ("SAX", "sus"), ("PIANO", "alias")]
-# cumbia: set 2 (was FLUTE) is the accordion of the cumbia firmware, from assets/samples-cumbia/ACORD:
+CC0_SETS = [("ACORD", "cumbia"), ("ACORD", "alias"), ("ACORD", "alias"), ("ACORD", "alias"), ("ACORD", "alias")]
+# cumbia: every set is the accordion (PIANO, FLUTE and SAX left out for flash); set 0 is of the cumbia firmware, from assets/samples-cumbia/ACORD:
 # WAVs at TR named by MIDI note, their loops and measured roots in loops.json (scripts/prep_acord.py)
 CUMBIA = SRC / "assets" / "samples-cumbia"
 PERC_SLOT = 4                                # core.h SMP_SET_PERC: SAMPLE's factory presets end before it
