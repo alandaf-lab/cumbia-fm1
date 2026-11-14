@@ -32,7 +32,9 @@ static struct {
     uint8_t dancer, card_l, card_r, rkind;
     uint32_t hits_seen, grito_t, acc_t;
     int8_t msg_t;
-    const char *msg;
+    char msg[24];
+    uint8_t page;                        /* 0 la canción, 1 la mezcla (GLO) */
+    uint16_t songs;                      /* canciones sacadas con el dado */
 } cbu = {0};
 
 static uint16_t cb_rgb(uint32_t c, uint32_t k)   /* el color a k / 15 */
@@ -115,14 +117,37 @@ static void cb_splash(void)
 }
 
 /* ------------------------------------------------------------ entrada --- */
-static void cb_say(const char *m)
+static void cb_say2(const char *m, const char *v)   /* arriba, ~1.5 s: lo que se está moviendo y su valor */
 {
-    cbu.msg = m;
-    cbu.msg_t = 60;                      /* ~1 s */
+    uint32_t i = 0;
+    while (*m && i < 22u)
+        cbu.msg[i++] = *m++;
+    if (v) {
+        cbu.msg[i++] = ' ';
+        while (*v && i < 23u)
+            cbu.msg[i++] = *v++;
+    }
+    cbu.msg[i] = 0;
+    cbu.msg_t = 100;
     cbu.dirty |= 1;
 }
+static void cb_say(const char *m) { cb_say2(m, 0); }
+static void cb_say_n(const char *m, int32_t v, const char *unit)
+{
+    char b[12];
+    uint32_t i;
+    cb_num(b, v, "");
+    for (i = 0; b[i]; i++)
+        ;
+    while (*unit && i < 11u)
+        b[i++] = *unit++;
+    b[i] = 0;
+    cb_say2(m, b);
+}
+static const char *const CB_MIX_NAMES[NPART] = {"ACORDEON", "BAJO", "PERCUSION", "GRITOS"};
 static void cb_dice(void)
 {
+    cbu.songs++;
     cbu.dice = 10;
     cbu.dice_t = 0;
     cbu.dirty |= 4;
@@ -149,6 +174,8 @@ static void cb_ui_input(void)
         cbu.dirty |= 7;
     }
     if (CB_PR(B_REC) || CB_PR(B_OCTDN)) {   /* el dado / la anterior: si suena, sigue sonando la nueva */
+        if (CB_PR(B_OCTDN) && cbu.songs > 1u)
+            cbu.songs--;
         uint32_t was = song.playing;
         if (was)
             seq_stop();
@@ -169,6 +196,7 @@ static void cb_ui_input(void)
     }
     if (CB_PR(B_SCL)) {
         cbc.bb ^= 1u;
+        cb_levels();
         cb_say(cbc.bb ? "BOOM BAP" : "CUMBIA");
         cbu.dirty |= 7;
     }
@@ -177,31 +205,48 @@ static void cb_ui_input(void)
         cb_sends();
         cb_say(cbc.eco ? "ECO SI" : "ECO NO");
     }
-    if ((e = panel_enc(EN_K1)) != 0) {
-        int32_t v = (int32_t)cbc.reb + e;
-        cbc.reb = (uint8_t)(v < 0 ? 0 : v > 35 ? 35 : v);
+    if (CB_PR(B_GLO)) {                  /* la mezcla: KNOB 1..4 los niveles de las pistas; GLO de nuevo, regresa */
+        cbu.page ^= 1u;
+        cb_say(cbu.page ? "MEZCLA" : "CANCION");
         cbu.dirty |= 1;
     }
-    if ((e = panel_enc(EN_K2)) != 0) {
-        int32_t v = (int32_t)cbc.rev + e;
-        cbc.rev = (uint8_t)(v < 0 ? 0 : v > 20 ? 20 : v);
-        cb_sends();
-        cbu.dirty |= 1;
-    }
-    if ((e = panel_enc(EN_K3)) != 0) {
-        int32_t v = cbc.bpm + e;
-        cbc.bpm = (int8_t)(v < -20 ? -20 : v > 20 ? 20 : v);
-        cbu.dirty |= 1;
-    }
-    if ((e = panel_enc(EN_K4)) != 0) {
-        cbc.key = (uint8_t)(((int32_t)cbc.key + (e > 0 ? 1 : 5)) % 6);
-        cb_tn = CB_KEYS[cbc.key] - 3;
-        cbu.dirty |= 1;
+    if (cbu.page) {
+        static const uint8_t K[NPART] = {EN_K1, EN_K2, EN_K3, EN_K4};
+        uint32_t i;
+        for (i = 0; i < NPART; i++)
+            if ((e = panel_enc(K[i])) != 0) {
+                int32_t v = (int32_t)cb_mix[i] + e * 2;
+                cb_mix[i] = (uint8_t)(v < 0 ? 0 : v > 127 ? 127 : v);
+                cb_levels();
+                cb_say_n(CB_MIX_NAMES[i], (int32_t)cb_mix[i] * 100 / 127, "");
+            }
+    } else {
+        if ((e = panel_enc(EN_K1)) != 0) {   /* a la izquierda se rebaja: la velocidad baja de 100 % a 65 % */
+            int32_t v = (int32_t)cbc.reb - e;
+            cbc.reb = (uint8_t)(v < 0 ? 0 : v > 35 ? 35 : v);
+            cb_say_n("REBAJADA", 100 - (int32_t)cbc.reb, "%");
+        }
+        if ((e = panel_enc(EN_K2)) != 0) {
+            int32_t v = (int32_t)cbc.rev + e;
+            cbc.rev = (uint8_t)(v < 0 ? 0 : v > 20 ? 20 : v);
+            cb_sends();
+            cb_say_n("REVERB", cbc.rev * 5, "");
+        }
+        if ((e = panel_enc(EN_K3)) != 0) {
+            int32_t v = cbc.bpm + e;
+            cbc.bpm = (int8_t)(v < -20 ? -20 : v > 20 ? 20 : v);
+            cb_say_n("TEMPO", (int32_t)cb_bpm_now(), " BPM");
+        }
+        if ((e = panel_enc(EN_K4)) != 0) {
+            cbc.key = (uint8_t)(((int32_t)cbc.key + (e > 0 ? 1 : 5)) % 6);
+            cb_tn = CB_KEYS[cbc.key] - 3;
+            cb_say2("TONO", CB_KEY_NAMES[cbc.key]);
+        }
     }
     if ((e = panel_enc(EN_SELECT)) != 0) {
         cbu.color = (uint8_t)(((int32_t)cbu.color + (e > 0 ? 1 : 7)) % 8);
         cb_theme();
-        cb_say(CB_COLOR_NAMES[cbu.color]);
+        cb_say2("COLOR", CB_COLOR_NAMES[cbu.color]);
     }
     (void)panel_enc(EN_ALGO);
     (void)panel_enc(EN_PRESET);
@@ -267,30 +312,20 @@ static void cb_card(int32_t x, int32_t y, uint32_t icon, const char *val, int ho
         cb_text_c(x + 28, y + 6, &AF_S, "BPM", cbu.mid);
     cb_text_c(x + 28, y + 26, &AF_S, val, cbu.fg);
 }
+static const char *const CB_ROLE_NAME[4] = {"INTRO", "ACORDEON", "PARA LA VOZ", "FINAL"};
 static void cb_draw_head(void)
 {
     char b[24];
     uint32_t i;
     cv_begin(240, 76, 0);
     cb_spr(6, 2, SPR_LOGO_ENCABEZADO_20PX, cbu.ramp);
-    if (cbu.msg_t > 0)
+    if (cbu.msg_t > 0)                   /* lo que se está moviendo */
         cb_text_c(120, 3, &AF_M, cbu.msg, cbu.fg);
+    else if (song.playing && cb.nsec)    /* la parte de la canción */
+        cb_text_c(120, 3, &AF_M, CB_ROLE_NAME[cb.sec[cb_sec_of(cb_step)].role & 3u], cbu.mid);
     else {
-        const char *k = CB_KEY_NAMES[cbc.key];
-        for (i = 0; *k; )
-            b[i++] = *k++;
-        b[i++] = ' ';
-        b[i++] = '-';
-        b[i++] = ' ';
-        cb_num(b + i, (int32_t)((cb_bpm_now() * cb_rate_tgt() + 32768u) >> 16), "");
-        for (; b[i]; i++)
-            ;
-        b[i++] = ' ';
-        b[i++] = 'B';
-        b[i++] = 'P';
-        b[i++] = 'M';
-        b[i] = 0;
-        cb_text_c(120, 3, &AF_M, b, cbu.fg);
+        cb_num(b, cbu.songs ? cbu.songs : 1, "CANCION ");
+        cb_text_c(120, 3, &AF_M, b, cbu.mid);
     }
     if (cbc.eco)
         cb_spr(196, 2, SPR_GRITOS_16, cbu.ramp);
@@ -299,17 +334,29 @@ static void cb_draw_head(void)
             cv_rect(218 + (int32_t)i, 4 + (int32_t)i / 2, 1, 12 - (int32_t)i, cbu.fg);
     else
         cv_rect(218, 5, 10, 10, cbu.dim);
-    cb_num(b, -(int32_t)cbc.reb, "");
-    if (!cbc.reb)
-        b[0] = '0', b[1] = 0;
-    else {
-        for (i = 0; b[i]; i++)
-            ;
-        b[i++] = '%';
-        b[i] = 0;
+    if (cbu.page) {                      /* la mezcla */
+        static const uint8_t IC[NPART] = {SPR_N, SPR_N, SPR_N, SPR_GRITOS_24};
+        static const char *const LB[NPART] = {"ACOR", "BAJO", "PERC", "VOZ"};
+        for (i = 0; i < NPART; i++) {
+            int32_t x = 3 + 59 * (int32_t)i;
+            cb_num(b, (int32_t)cb_mix[i] * 100 / 127, "");
+            cv_rrect(x, 28, 57, 44, 6, cbu.dim, 0);
+            if (IC[i] < SPR_N)
+                cb_spr(x + 16, 30, IC[i], cbu.ramp);
+            else
+                cb_text_c(x + 28, 34, &AF_S, LB[i], cbu.fg);
+            cb_text_c(x + 28, 54, &AF_S, b, cbu.fg);
+        }
+        cv_blit(0, 0);
+        return;
     }
+    cb_num(b, 100 - (int32_t)cbc.reb, "");
+    for (i = 0; b[i]; i++)
+        ;
+    b[i++] = '%';
+    b[i] = 0;
     cb_card(3, 28, SPR_FX_REBAJADA, b, cbc.reb != 0);
-    cb_num(b, cbc.rev * 5, "");   /* (0..100) */
+    cb_num(b, cbc.rev * 5, "");
     cb_card(62, 28, SPR_FX_REVERB, b, 0);
     cb_num(b, (int32_t)cb_bpm_now(), "");
     cb_card(121, 28, SPR_N, b, cbc.bpm != 0);
@@ -365,6 +412,8 @@ static void cb_follow(void)
     if (st != cbu.lstep) {
         if (!(st % 16u) || (st >> 4) != (cbu.lstep >> 4))
             cbu.dirty |= 4;
+        if (cb.nsec && cb_sec_of(st) != cb_sec_of(cbu.lstep))
+            cbu.dirty |= 1;
         cbu.lstep = st;
     }
     /* el bailarín: un cuadro por 16avo (al revés con la cinta, quieto si para); el DJ: uno por tiempo */
@@ -447,6 +496,7 @@ static void cb_ui_draw(void)
 static void cb_ui_boot(void)             /* main.c, antes del ciclo: la primera canción y la pantalla entera */
 {
     cbu.fresh = 1;
+    cbu.songs = 0;
     cb_generate(1u + (fm1_ticks() & 0xFFFFu));
     cb_tn = CB_KEYS[cbc.key] - 3;
     cb_theme();

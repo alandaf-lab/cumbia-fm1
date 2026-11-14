@@ -116,7 +116,7 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
 /* master: peak limiter in front of the soft clipper. Fast attack (~0.1 ms),
  * ~150 ms release, threshold where tanh is still nearly linear, so chords
  * get quieter instead of crushed. */
-#define LIM_T 18000
+#define LIM_T 28000                     /* cumbia: más fuerte que Felucca (18000), como otros firmwares */
 static int32_t lim_env = LIM_T;
 /* MENU > USB LEVEL FIXED (for #42: record over USB with the speaker turned down): the mix goes to master_out at the
  * full MASTER level, USB audio takes that (audio.c uac_tap), and only then does MASTER scale what the DAC gets

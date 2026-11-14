@@ -18,11 +18,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import sampleio as sio  # noqa: E402
 
-GRITOS = [("wepa", 62.6), ("cumbia", 54.6), ("opa", 69.5), ("abailar", 60.7), ("mty", 48.0)]   # = cumbia.c CB_VOZ_M0
+GRITOS = [("wepa_C", 62.6), ("cumbia_C", 54.6), ("opa_C", 69.5), ("abailar_C", 60.7), ("mty_C", 48.0)]   # = cumbia.c CB_VOZ_M0
+GRITOS2 = [("wepa_A", 61.6), ("cumbia_A", 53.6), ("opa_A", 68.5), ("abailar_A", 61.7), ("wepa_B", 58.6),
+           ("cumbia_B", 50.6)]
 
 
 def one(name):
-    sr, x = sio.read_any_wav(ROOT / "assets/voz" / f"{name}_C.wav")
+    sr, x = sio.read_any_wav(ROOT / "assets/voz" / f"{name}.wav")
     x = np.asarray(x, dtype=np.float64)
     from math import gcd
     g = gcd(sio.SLOT_RATE, sr)
@@ -34,24 +36,26 @@ def one(name):
     return y
 
 
-def build():
-    ys = [one(n) for n, _ in GRITOS]
-    g = 30000 / max(np.abs(y).max() for y in ys)
+def build(lst, name, g=None):
+    ys = [one(n) for n, _ in lst]
+    g = g or 30000 / max(np.abs(y).max() for y in ys)
     zones = []
-    for i, ((name, m0), y) in enumerate(zip(GRITOS, ys)):
+    for i, ((_, m0), y) in enumerate(zip(lst, ys)):
         s = [int(v) for v in np.clip(np.round(y * g), -32768, 32767)]
-        r = 24 + 24 * i
-        zones.append((s, r + (m0 - round(m0)), r - 12, r + 11))
-    return sio.user_slot("GRITOS", zones)
+        r = 12 + 20 * i                                   # = cumbia.c cb_grito
+        zones.append((s, r + (m0 - round(m0)), r - 10, r + 9))
+    return sio.user_slot(name, zones), g
 
 
 if __name__ == "__main__":
-    hdr, data = build()
     (ROOT / "build").mkdir(exist_ok=True)
-    (ROOT / "build/gritos.hdr").write_bytes(hdr)
-    (ROOT / "build/gritos.bin").write_bytes(data)
-    (ROOT / "web/gritos.js").write_text(
-        "/* tools/gen_gritos.py: la ranura USR2 con los gritos (cabecera 480 B, luego el ADPCM) */\n"
-        "const GRITOS = {name: 'GRITOS', hdr: '%s',\n  data: '%s'};\n"
-        % (base64.b64encode(hdr).decode(), base64.b64encode(data).decode()))
-    print(f"gritos: {len(GRITOS)} zonas, {len(data)} B de {sio.SLOT_MAX_DATA}")
+    (hdr, data), g = build(GRITOS, "GRITOS")
+    (hdr2, data2), _ = build(GRITOS2, "GRITOS2", g)       # el mismo nivel que la voz C
+    js = "/* tools/gen_gritos.py: USR2 los gritos de la voz C, USR3 los de las voces A y B (cabecera 480 B, el ADPCM) */\n"
+    for nm, var, h, d in (("GRITOS", "GRITOS", hdr, data), ("GRITOS2", "GRITOS2", hdr2, data2)):
+        (ROOT / f"build/{nm.lower()}.hdr").write_bytes(h)
+        (ROOT / f"build/{nm.lower()}.bin").write_bytes(d)
+        js += "const %s = {name: '%s', hdr: '%s',\n  data: '%s'};\n" % (var, nm, base64.b64encode(h).decode(),
+                                                                       base64.b64encode(d).decode())
+        print(f"{nm}: {len(d)} B de {sio.SLOT_MAX_DATA}")
+    (ROOT / "web/gritos.js").write_text(js)

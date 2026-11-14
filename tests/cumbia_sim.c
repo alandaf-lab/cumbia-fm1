@@ -20,8 +20,9 @@ int main(int argc, char **argv)
         trk[i].p[P_LEVEL] = CB_LEVEL[i];
     }
     {                                         /* USR1 el kit, USR2 los gritos (tools/gen_kit.py, gen_gritos.py) */
-        static const char *const F[2][2] = {{"build/kit_perc.hdr", "build/kit_perc.bin"}, {"build/gritos.hdr", "build/gritos.bin"}};
-        for (i = 0; i < 2u && !getenv("NOKIT"); i++) {
+        static const char *const F[3][2] = {{"build/kit_perc.hdr", "build/kit_perc.bin"}, {"build/gritos.hdr", "build/gritos.bin"},
+                                            {"build/gritos2.hdr", "build/gritos2.bin"}};
+        for (i = 0; i < 3u && !getenv("NOKIT"); i++) {
             FILE *a = fopen(F[i][0], "rb"), *b = fopen(F[i][1], "rb");
             if (!a || !b || !fread(host_slots[i], 1, 512, a) || !fread(host_slots[i] + 512, 1, sizeof host_slots[i] - 512, b))
                 return 1;
@@ -39,6 +40,7 @@ int main(int argc, char **argv)
     if (getenv("BB")) cbc.bb = 1;
     if (getenv("KEY")) cbc.key = (uint8_t)atoi(getenv("KEY"));
     cb_tn = CB_KEYS[cbc.key] - 3;
+    cb_levels();
     {                                         /* como al encender: el audio corre antes de que haya canción */
         int32_t ob[2 * CTL];
         for (i = 0; i < 64u; i++)
@@ -58,9 +60,11 @@ int main(int argc, char **argv)
     for (f = 0; f < FS * secs; f += CTL) {
         uint32_t v = 0, p, k;
         if (getenv("GRITOS") && f >= FS * 6u && f % (FS * 4u) < CTL)   /* GRITOS: uno cada 4 s desde el segundo 6 */
-            cb_grito((f / (FS * 4u)) % CB_NVOZ);
+            cb_grito((f / (FS * 4u)) % CB_NVOZ);   /* (los 11, uno tras otro) */
         if (getenv("CINTA"))                  /* CINTA=s: la cinta para atrás de s a s + 1.5 */
             cbc.cinta = f >= FS * (uint32_t)atoi(getenv("CINTA")) && f < FS * (uint32_t)atoi(getenv("CINTA")) + FS * 3u / 2u;
+        if (getenv("STOP") && f / CTL == FS * (uint32_t)atoi(getenv("STOP")) / CTL)   /* STOP=s: el transporte para */
+            seq_stop();
         if (getenv("ECO"))
             cbc.eco = 1, cb_sends();
         mix_block(o, CTL);
@@ -84,7 +88,7 @@ int main(int argc, char **argv)
     printf("voces a la vez (máx): %u, muestras saturadas: %u, al final tocando: %u; TUNE %d, BPM %d, paso %u\n", vmax, clips, cb_play, song.g[G_TUNE], song.g[G_BPM], cb_step);
     {                                         /* el tempo: los pasos que debieron sonar (sin rebajada ni fin de canción) */
         uint32_t want = (uint32_t)((uint64_t)cb.bpm * 4u * secs / 60u);
-        if (!cbc.reb && cb_play && (cb_step + 3u < want || cb_step > want + 3u)) {
+        if (!cbc.reb && cb_play && !getenv("STOP") && (cb_step + 3u < want || cb_step > want + 3u)) {
             printf("FALLA: %u pasos en %u s, debían ser %u\n", cb_step, secs, want);
             return 1;
         }

@@ -410,7 +410,9 @@ static void q_fire(cb_q_t *e)
         if (e->tr == CB_PERC && cb_kit)
             cb_perc_room();
         if (e->tr == CB_ACC)
-            cb_acc_hit = cb_acc_hit ? 2u : 1u;                /* (cumbia_ui.c: varias a la vez, un acorde) */
+            cb_acc_hit = cb_acc_hit ? 2u : 1u;
+        if (e->tr == CB_VOZ && e->gen)
+            t->p[P_E0] = (int16_t)(SMP_NSETS + e->gen);   /* el grito de USR2 o USR3 (la nota lo lee al empezar) */                /* (cumbia_ui.c: varias a la vez, un acorde) */
         cb_gen[e->tr][e->note]++;
         cb_on[e->tr][e->note >> 3] |= (uint8_t)(1u << (e->note & 7u));
         trk_note_on(t, e->note, e->vel);
@@ -572,13 +574,24 @@ static void cb_play_step(uint32_t g)
         for (k = CB_GROOVE_IDX[gs]; k < CB_GROOVE_IDX[gs + 1u]; k++) {
             const cb_hit_t *h = &CB_GROOVE[k];
             if (cbc.bb ? h->inst <= GI_CONGA2 || h->inst == GI_GUIRO_L || h->inst == GI_GUIRO_S : inst_ok(h->inst, s->perc))
-                perc_hit(h->inst, (int32_t)((uint32_t)h->frac * sd / 256u), cbc.bb ? h->vel * 9 / 10 : h->vel * 3 / 2);
+                perc_hit(h->inst, (int32_t)((uint32_t)h->frac * sd / 256u), cbc.bb ? h->vel * 4 / 10 : h->vel * 3 / 2);
         }
     }
 }
 
 /* -------------------------------------------------------- transporte --- */
 static const int16_t CB_LEVEL[NPART] = {116, 88, 92, 112};   /* acordeón, bajo, percusión, gritos */
+static uint8_t cb_mix[NPART] = {116, 88, 92, 112};           /* la mezcla (GLO: cumbia_ui.c) */
+static void cb_levels(void)              /* los niveles de las pistas; con el boom bap la batería sube */
+{
+    uint32_t i;
+    for (i = 0; i < NPART; i++) {
+        uint32_t v = cb_mix[i];
+        if (i == CB_PERC && cbc.bb)
+            v = v * 3u / 2u;
+        trk[i].p[P_LEVEL] = (int16_t)(v > 127u ? 127u : v);
+    }
+}
 static void set_engine_of(track_t *t, uint32_t ei);         /* ui.c */
 static void apply_preset_to(track_t *t, uint32_t pi);
 static void track_defaults_steps(track_t *t);
@@ -642,7 +655,6 @@ static void cumbia_tracks(void)          /* las cuatro pistas con los sonidos de
             apply_preset_to(t, TRK_DEF[i][1]);
         }
         t->p[P_MUTE] = 0;
-        t->p[P_LEVEL] = CB_LEVEL[i];      /* la mezcla del prototipo: acordeón al frente, percusión presente */
         t->p[P_SLCR] = 0;                 /* (sl_buf es la cinta para atrás) */
         track_defaults_steps(t);          /* sin patrones guardados: suena solo la canción */
     }
@@ -650,6 +662,7 @@ static void cumbia_tracks(void)          /* las cuatro pistas con los sonidos de
     song.g[G_SWING] = 0;
     cb_perc_setup();
     cb_sends();
+    cb_levels();
 }
 
 /* la cinta: velocidad (rebajada con inercia), tempo y afinación juntos, como una tornamesa que se frena */
@@ -707,9 +720,10 @@ static void cb_back_seed(void)           /* la canción anterior */
     cb_nprev--;
     cb_generate(cb_prev_seed[cb_nprev % 8u]);
 }
+static volatile uint8_t cb_kill;         /* apagar todo en el contexto de audio (cumbia_tick): sin carreras */
 static void cumbia_start(void)
 {
-    cb_all_off();
+    cb_kill = 1;
     if (!cb.nsec)
         cb_new_seed();
     cb_step = 0;
@@ -721,21 +735,29 @@ static void cumbia_start(void)
 static void cumbia_stop(void)
 {
     cb_play = 0;
-    cb_all_off();
+    cb_kill = 1;
+    panic_req = (uint8_t)((1u << NTRK) - 1u);   /* (seq.c: suelta cualquier nota que siga sonando, en audio) */
 }
 
 /* ------------------------------------------------------------- gritos --- */
-/* tools/gen_gritos.py: el grito i en las teclas 12 + 24 i .. 35 + 24 i, su altura natural en CB_VOZ_ROOT + 24 i;
- * CB_VOZ_M0: la nota MIDI (redondeada) que canta. Se afina a la tónica o la quinta más cercana: dentro del tono */
-#define CB_NVOZ 5u
-static const uint8_t CB_VOZ_M0[CB_NVOZ] = {63, 55, 70, 61, 48};   /* wepa, cumbia, opa, a bailar, Monterrey */
+/* tools/gen_gritos.py: USR2 los cinco gritos de la voz C, USR3 seis más (voces A y B). El grito j de una ranura en las
+ * teclas R - 10 .. R + 9, R = 12 + 20 j, su altura natural (CB_VOZ_M0, redondeada) en R; la fracción de semitono va en
+ * la raíz de la zona. Se afina a la tónica o la quinta más cercana: dentro del tono */
+#define CB_NVOZ 11u
+static const uint8_t CB_VOZ_M0[CB_NVOZ] = {63, 55, 70, 61, 48,   /* C: wepa, cumbia, opa, a bailar, Monterrey */
+                                           62, 54, 68, 62, 59, 51};   /* (= round() de gen_gritos.py) */   /* A: wepa, cumbia, opa, a bailar; B: wepa, cumbia */
 static volatile uint8_t cb_grito_on;     /* el último grito disparado + 1 (cumbia_ui.c: el micrófono) */
 static void cb_grito(uint32_t i)         /* contexto de audio (keyboard_block) */
 {
     int32_t best = 0, bd = 99, m, at = 0;
+    uint32_t slot, j;
     if (!cb_voz || i >= CB_NVOZ)
         return;
-    for (m = 36; m < 84; m++) {
+    if (i >= 5u && !usr_nz[2])
+        i = (i - 5u) % 5u;                /* (sin USR3: los de la voz C) */
+    slot = i < 5u ? 1u : 2u;
+    j = i < 5u ? i : i - 5u;
+    for (m = 30; m < 90; m++) {
         int32_t pc = ((m - cb_tn) % 12 + 12) % 12, d = m - CB_VOZ_M0[i];
         d = d < 0 ? -d : d;
         if ((pc == 0 || pc == 7) && d < bd) {
@@ -748,16 +770,20 @@ static void cb_grito(uint32_t i)         /* contexto de audio (keyboard_block) *
         if (cb_step % 2u)
             at += (int32_t)cb_len16;
     }
-    note(CB_VOZ, 24 + 24 * (int32_t)i + best - CB_VOZ_M0[i], at, (int32_t)FS * 3, 110);
+    m = 12 + 20 * (int32_t)j + best - CB_VOZ_M0[i];
+    if (cb_nq + 2u <= CB_NQ && m >= 0 && m < 128) {
+        cb_q[cb_nq++] = (cb_q_t){at, CB_VOZ, (uint8_t)m, 110, (uint8_t)slot};   /* (gen de un note-on: la ranura) */
+        q_put(at + (int32_t)FS * 3, CB_VOZ, m, 0);
+    }
     cb_grito_on = (uint8_t)(i + 1u);
 }
 
 /* ---------------------------------------------------- teclado del FM-1 --- */
 /* las teclas blancas tocan el acordeón en la escala de la canción (menor natural desde la tónica); las negras, los
- * gritos (las cinco del grupo de abajo y de nuevo en las de arriba). Contexto de audio (seq.c keyboard_block) */
+ * gritos (las cinco del grupo de abajo: la voz C; las seis de arriba: las voces A y B). Contexto de audio (seq.c keyboard_block) */
 static const uint8_t CB_KB_WHITE[27] = {0, 0xFF, 1, 0xFF, 2, 0xFF, 3, 4, 0xFF, 5, 0xFF, 6, 7, 0xFF, 8, 0xFF, 9, 0xFF, 10, 11,
     0xFF, 12, 0xFF, 13, 14, 0xFF, 15};
-static const uint8_t CB_KB_BLACK[27] = {0, 0, 0, 1, 0, 2, 0, 0, 3, 0, 4, 0, 0, 5, 0, 6, 0, 7, 0, 0, 8, 0, 9, 0, 0, 10, 0};
+static const uint8_t CB_KB_BLACK[27] = {0, 1, 0, 2, 0, 3, 0, 0, 4, 0, 5, 0, 0, 6, 0, 7, 0, 8, 0, 0, 9, 0, 10, 0, 0, 11, 0};
 static uint8_t cb_kb_note[27];
 static volatile uint32_t cb_kb_lit;      /* teclas que suenan (cumbia_ui.c: las luces) */
 static void cumbia_keys(uint32_t cur, uint32_t ch)
@@ -773,7 +799,7 @@ static void cumbia_keys(uint32_t cur, uint32_t ch)
                 cb_kb_note[k] = (uint8_t)m;
                 trk_note_on(&trk[CB_ACC], (uint32_t)m, 96);
             } else if (CB_KB_BLACK[k])
-                cb_grito((CB_KB_BLACK[k] - 1u) % CB_NVOZ);
+                cb_grito(CB_KB_BLACK[k] - 1u);
             cb_kb_lit |= 1u << k;
         } else {
             if (CB_KB_WHITE[k] != 0xFF && cb_kb_note[k])
@@ -788,6 +814,10 @@ static void cumbia_tick(uint32_t n)
 {
     uint32_t i, k;
     cb_tune_block(n);
+    if (cb_kill) {
+        cb_kill = 0;
+        cb_all_off();
+    }
     if (cb_play && song.playing) {
         if (cb_step == 0) {                                   /* PLAY: el paso 0 ahora */
             cb_len16 = cb_len16_now();
@@ -913,8 +943,8 @@ static void cumbia_post(int32_t *l, int32_t *r, int32_t *wet, uint32_t n)
             for (c = 0; c < 2; c++)
                 x[c] = (int32_t)(((int64_t)x[c] * cr_main + (int64_t)y * cr_g) >> 15);
         }
-        l[i] = x[0];
-        r[i] = x[1];
+        l[i] = x[0] * 29 / 16;                                 /* +5 dB: el limitador de master_out cuida los picos */
+        r[i] = x[1] * 29 / 16;
         wet[i] = 0;
     }
 }

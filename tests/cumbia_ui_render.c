@@ -58,6 +58,7 @@ int main(int argc, char **argv)
         host_preset(&trk[i], TRK_DEF[i][0], TRK_DEF[i][1]);
     slot_load(0, "build/kit_perc.hdr", "build/kit_perc.bin");
     slot_load(1, "build/gritos.hdr", "build/gritos.bin");
+    slot_load(2, "build/gritos2.hdr", "build/gritos2.bin");
     cumbia_tracks();
     cb_splash();
     shot(d, "0_arranque");
@@ -71,12 +72,12 @@ int main(int argc, char **argv)
     shot(d, "2b_tocando");
     run_ms(200);
     shot(d, "2c_tocando");
-    host_enc[panel.enc[EN_K1]] = 25;
+    host_enc[panel.enc[EN_K1]] = -25;
     host_enc[panel.enc[EN_K2]] = 4;
     run_ms(2000);
     shot(d, "3_rebajada");
     cb_grito(0);
-    run_ms(400);
+    run_ms(1500);
     shot(d, "4_grito");
     cb_press(B_SCL);
     run_ms(2500);
@@ -91,6 +92,12 @@ int main(int argc, char **argv)
     run_ms(500);
     shot(d, "7_cinta");
     fm1_in.buttons = 0;
+    cb_press(B_GLO);
+    run_ms(100);
+    host_enc[panel.enc[EN_K3]] = 6;
+    run_ms(300);
+    shot(d, "7b_mezcla");
+    cb_press(B_GLO);
     cb_press(B_REC);
     run_ms(200);
     shot(d, "8_dado");
