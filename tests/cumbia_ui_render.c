@@ -103,6 +103,21 @@ int main(int argc, char **argv)
     shot(d, "8_dado");
     run_ms(1000);
     shot(d, "9_cancion_nueva");
+    cb_press(B_GLO);
+    run_ms(100);
+    cb_press(B_SCL);
+    run_ms(100);
+    fm1_in.buttons |= 1u << panel.btn[B_GLO];
+    cb_press(B_LFO);
+    run_ms(200);
+    fm1_in.buttons = 0;
+    shot(d, "a_mezcla_mute_solo");
+    cb_press(B_HOME);
+    cb_loading = 1;
+    cb_load_off = 40000;
+    cb_load_ms = 0;          /* (run_ms cuenta fm1_ms desde 0) */
+    run_ms(100);
+    shot(d, "b_cargando");
     printf("pantallas en %s\n", d);
     return 0;
 }

@@ -77,8 +77,14 @@ int main(int argc, char **argv)
                 on = want;
                 if (e == 100)
                     perf_k[0] = (int8_t)(on ? -80 : 0);
+                else if (e == 101) {
+                    cbc.corte = on ? 1u : 2u;
+                    cb_levels();
+                }
                 else
                     perf_press((uint32_t)e, on);
+                if (e == PF_ETHR)
+                    song.g[G_DMIX] = (int16_t)(on ? atoi(getenv("DMIXT") ? getenv("DMIXT") : "60") : 90);
             }
         }
         if (getenv("ECO"))
@@ -104,8 +110,8 @@ int main(int argc, char **argv)
     printf("voces a la vez (máx): %u, muestras saturadas: %u, al final tocando: %u; TUNE %d, BPM %d, paso %u\n", vmax, clips, cb_play, song.g[G_TUNE], song.g[G_BPM], cb_step);
     {                                         /* el tempo: los pasos que debieron sonar (sin rebajada ni fin de canción) */
         uint32_t want = (uint32_t)((uint64_t)cb.bpm * 4u * secs / 60u);
-        if (!cbc.reb && cb_play && !getenv("STOP") && (cb_step + 3u < want || cb_step > want + 3u)) {
-            printf("FALLA: %u pasos en %u s, debían ser %u\n", cb_step, secs, want);
+        if (!cbc.reb && cb_play && !getenv("STOP") && (cb_nsteps + 3u < want || cb_nsteps > want + 3u)) {
+            printf("FALLA: %u pasos en %u s, debían ser %u\n", cb_nsteps, secs, want);
             return 1;
         }
     }

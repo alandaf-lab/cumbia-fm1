@@ -1,17 +1,15 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* CUMBIA: la interfaz del FM-1 (en lugar de la de Felucca: main.c llama cb_ui_input, cb_ui_leds y cb_ui_draw).
  *
- * Botones                                   Perillas
- *   PLAY   tocar / parar la canción          KNOB 1  rebajada (0 a -35 %, con inercia, como una tornamesa)
- *   REC    el dado: canción nueva            KNOB 2  reverb
- *   OCT-   la canción anterior               KNOB 3  tempo (+-20 BPM sobre el de la canción)
- *   FX     cinta para atrás (mientras se     KNOB 4  tono del acordeón (Sol Do Fa Re La Sib)
- *          mantiene)                         SELECT  color de la pantalla
- *   SCL    boom bap sí / no
- *   LFO    eco de sonidero en los gritos sí / no
- *   GLO    la mezcla (KNOB 1..4: acordeón, bajo, percusión, gritos); otra vez, regresa
- *   ENV    ahogada (mantenido)     EDIT freno (mantenido)
- *   ARP    repetición (mantenido)  SEQ  eco a todo (mantenido)
+ * Botones (arriba: los efectos push y la mezcla; abajo: lo que se prende y se apaga)
+ *   FX     cinta para atrás      SCL  ahogada        ENV  freno        LFO  repetición     EDIT corte
+ *   GLO    la mezcla: KNOB 1..4 los niveles; FX, SCL, ENV, LFO callan acordeón, bajo, percusión, gritos;
+ *          con GLO mantenido, la dejan sola. HOME o GLO otra vez: la pantalla principal
+ *   HOME   la pantalla principal  SAVE eco sí / no (gritos)   ARP eco a todo (mantenido)   SEQ boom bap
+ *   PLAY   tocar / parar (la canción se repite hasta que la paras o tiras el dado)   REC el dado
+ *   OCT-   la canción anterior    OCT+ medio tono arriba sí / no
+ * Perillas: KNOB 1 rebajada, 2 reverb, 3 tempo, 4 tono; SELECT color; ALGORITHM sentimiento (de máquina a
+ *   suelto); PRESETS percusión (la de la canción, nada, güiro, ligera, completa)
  * Teclado: las blancas tocan el acordeón en la escala de la canción, las negras los gritos (cumbia.c cumbia_keys).
  *
  * Pantalla 240 x 240, un solo color sobre negro (el usuario lo elige):
@@ -37,7 +35,7 @@ static struct {
     int8_t msg_t;
     char msg[24];
     uint8_t page;                        /* 0 la canción, 1 la mezcla (GLO) */
-    uint8_t push[4];                     /* los efectos push mantenidos (CB_PUSH) */
+    uint8_t push[5];                     /* los efectos push mantenidos (CB_PUSH) */
     uint16_t songs;                      /* canciones sacadas con el dado */
 } cbu = {0};
 
@@ -158,12 +156,16 @@ static void cb_dice(void)
 }
 /* efectos push (los de Felucca, perform.c), mientras se mantiene el botón */
 #define CB_LPF 0xFFu
-static const struct { uint8_t btn, pf, icon; const char *name; } CB_PUSH[4] = {
-    {B_ENV, CB_LPF, SPR_FX_AHOGADA, "AHOGADA"},         /* un pasabajos fijo: la música ahogada */
-    {B_EDIT, PF_TAPE, SPR_FX_FRENO, "FRENO"},          /* la tornamesa se apaga */
-    {B_ARP, PF_R16, SPR_FX_REPETICION, "REPETICION"},       /* repite el último 16avo (un octavo no cabe en el búfer abajo de 81 BPM) */
-    {B_SEQ, PF_ETHR, SPR_FX_ECO_SONIDERO, "ECO A TODO"},      /* toda la mezcla al eco */
+#define CB_CUT 0xFEu
+#define CB_NPUSH 5u
+static const struct { uint8_t btn, pf, icon; const char *name; } CB_PUSH[CB_NPUSH] = {
+    {B_SCL, CB_LPF, SPR_FX_AHOGADA, "AHOGADA"},         /* un pasabajos fijo: la música ahogada */
+    {B_ENV, PF_TAPE, SPR_FX_FRENO, "FRENO"},            /* la tornamesa se apaga */
+    {B_LFO, PF_R16, SPR_FX_REPETICION, "REPETICION"},   /* repite el último 16avo (un octavo no cabe en el búfer abajo de 81 BPM) */
+    {B_EDIT, CB_CUT, SPR_FX_CORTE, "CORTE"},            /* bajo y percusión fuera; regresan en el siguiente tiempo */
+    {B_ARP, PF_ETHR, SPR_FX_ECO_SONIDERO, "ECO A TODO"},   /* toda la mezcla al eco (sin subir el volumen) */
 };
+static const char *const CB_DENS_NAMES[5] = {"DE LA CANCION", "NADA", "GUIRO", "LIGERA", "COMPLETA"};
 static void cb_ui_input(void)
 {
     uint32_t pressed = fm1_input_edges(0), held = fm1_in.buttons;
@@ -203,43 +205,76 @@ static void cb_ui_input(void)
         cbu.dirty |= 7;
     }
     perf_latch_on = 0;                   /* (los efectos push solo mientras se mantienen) */
+    if (CB_PR(B_GLO)) {                  /* la mezcla; GLO de nuevo (o HOME), la pantalla principal */
+        cbu.page ^= 1u;
+        cb_say(cbu.page ? "MEZCLA" : "CANCION");
+        cbu.dirty |= 3;
+    }
+    if (CB_PR(B_HOME) && cbu.page) {
+        cbu.page = 0;
+        cbu.dirty |= 3;
+    }
     {
         uint32_t k;
-        for (k = 0; k < 4u; k++) {
+        for (k = 0; k < CB_NPUSH; k++) {
             uint8_t h = (uint8_t)CB_HELD(CB_PUSH[k].btn);
+            if (cbu.page && k < 3u)
+                h = 0;                   /* (en la mezcla, SCL ENV LFO callan pistas) */
             if (h == cbu.push[k])
                 continue;
             cbu.push[k] = h;
             if (CB_PUSH[k].pf == CB_LPF)
                 perf_k[0] = (int8_t)(h ? -80 : 0);
-            else
+            else if (CB_PUSH[k].pf == CB_CUT) {
+                cbc.corte = h ? 1u : (song.playing ? 2u : 0u);   /* al soltar: en el siguiente tiempo (cumbia_tick) */
+                cb_levels();
+            } else
                 perf_press(CB_PUSH[k].pf, h);
-            if (CB_PUSH[k].pf == PF_ETHR)        /* eco a todo: la repetición más presente mientras se mantiene */
-                song.g[G_DMIX] = (int16_t)(h ? 127 : 90);
+            if (CB_PUSH[k].pf == PF_ETHR)        /* eco a todo: la repetición sube, el volumen no */
+                song.g[G_DMIX] = (int16_t)(h ? 60 : 90);
             if (h)
                 cb_say(CB_PUSH[k].name);
             cbu.dirty |= 2;
         }
     }
-    if (cbc.cinta != CB_HELD(B_FX)) {
+    if (cbu.page) {                      /* FX SCL ENV LFO: callar; con GLO mantenido, sola */
+        static const uint8_t MB[NPART] = {B_FX, B_SCL, B_ENV, B_LFO};
+        uint32_t i;
+        for (i = 0; i < NPART; i++)
+            if ((pressed >> panel.btn[MB[i]]) & 1u) {
+                if (CB_HELD(B_GLO) && !CB_PR(B_GLO)) {
+                    cb_solo = cb_solo == i ? 0xFFu : (uint8_t)i;
+                    cb_say2(CB_MIX_NAMES[i], cb_solo == i ? "SOLA" : "CON TODAS");
+                } else {
+                    cb_mute ^= (uint8_t)(1u << i);
+                    cb_say2(CB_MIX_NAMES[i], (cb_mute >> i) & 1u ? "CALLADA" : "SUENA");
+                }
+                cb_levels();
+                cbu.dirty |= 1;
+            }
+    }
+    if (!cbu.page && cbc.cinta != CB_HELD(B_FX)) {
         cbc.cinta = (uint8_t)CB_HELD(B_FX);
         cbu.dirty |= 3;
+    } else if (cbu.page && cbc.cinta) {
+        cbc.cinta = 0;
+        cbu.dirty |= 3;
     }
-    if (CB_PR(B_SCL)) {
+    if (CB_PR(B_SEQ)) {
         cbc.bb ^= 1u;
         cb_levels();
         cb_say(cbc.bb ? "BOOM BAP" : "CUMBIA");
         cbu.dirty |= 7;
     }
-    if (CB_PR(B_LFO)) {
+    if (CB_PR(B_SAVE)) {
         cbc.eco ^= 1u;
         cb_sends();
         cb_say(cbc.eco ? "ECO SI" : "ECO NO");
     }
-    if (CB_PR(B_GLO)) {                  /* la mezcla: KNOB 1..4 los niveles de las pistas; GLO de nuevo, regresa */
-        cbu.page ^= 1u;
-        cb_say(cbu.page ? "MEZCLA" : "CANCION");
-        cbu.dirty |= 1;
+    if (CB_PR(B_OCTUP)) {                /* medio tono arriba, como el último tramo de muchas cumbias */
+        cbc.semi ^= 1u;
+        cb_tn = CB_KEYS[cbc.key] - 3 + (int32_t)cbc.semi;
+        cb_say(cbc.semi ? "MEDIO TONO ARRIBA" : "TONO NORMAL");
     }
     if (cbu.page) {
         static const uint8_t K[NPART] = {EN_K1, EN_K2, EN_K3, EN_K4};
@@ -270,17 +305,25 @@ static void cb_ui_input(void)
         }
         if ((e = panel_enc(EN_K4)) != 0) {
             cbc.key = (uint8_t)(((int32_t)cbc.key + (e > 0 ? 1 : 5)) % 6);
-            cb_tn = CB_KEYS[cbc.key] - 3;
+            cb_tn = CB_KEYS[cbc.key] - 3 + (int32_t)cbc.semi;
             cb_say2("TONO", CB_KEY_NAMES[cbc.key]);
         }
+    }
+    if ((e = panel_enc(EN_ALGO)) != 0) {
+        int32_t v = (int32_t)cbc.sent + e;
+        cbc.sent = (uint8_t)(v < 0 ? 0 : v > 10 ? 10 : v);
+        cb_say_n("SENTIMIENTO", cbc.sent, "");
+    }
+    if ((e = panel_enc(EN_PRESET)) != 0) {
+        int32_t v = (int32_t)cbc.dens + (e > 0 ? 1 : -1);
+        cbc.dens = (uint8_t)(v < 0 ? 0 : v > 4 ? 4 : v);
+        cb_say2("PERCUSION", CB_DENS_NAMES[cbc.dens]);
     }
     if ((e = panel_enc(EN_SELECT)) != 0) {
         cbu.color = (uint8_t)(((int32_t)cbu.color + (e > 0 ? 1 : 7)) % 8);
         cb_theme();
         cb_say2("COLOR", CB_COLOR_NAMES[cbu.color]);
     }
-    (void)panel_enc(EN_ALGO);
-    (void)panel_enc(EN_PRESET);
     if (cb_done) {                       /* la canción terminó */
         cb_done = 0;
         seq_stop();
@@ -304,11 +347,18 @@ static void cb_ui_leds(void)
     }
     for (k = 0; k < NB; k++)
         led_put(nd, panel.btn[k], 1);
-    led_put(nl, panel.btn[B_SCL], cbc.bb);
-    led_put(nl, panel.btn[B_LFO], cbc.eco);
+    led_put(nl, panel.btn[B_SEQ], cbc.bb);
+    led_put(nl, panel.btn[B_SAVE], cbc.eco);
+    led_put(nl, panel.btn[B_OCTUP], cbc.semi);
+    led_put(nl, panel.btn[B_GLO], cbu.page);
     led_put(nl, panel.btn[B_FX], cbc.cinta);
-    for (k = 0; k < 4u; k++)
+    for (k = 0; k < CB_NPUSH; k++)
         led_put(nl, panel.btn[CB_PUSH[k].btn], cbu.push[k]);
+    if (cbu.page) {                      /* en la mezcla: encendidas las pistas que suenan */
+        static const uint8_t MB[NPART] = {B_FX, B_SCL, B_ENV, B_LFO};
+        for (k = 0; k < NPART; k++)
+            led_put(nl, panel.btn[MB[k]], !((cb_mute >> k) & 1u) && (cb_solo >= NPART || cb_solo == k));
+    }
     for (k = 0; k < 27u; k++) {
         led_put(nd, 14u + k, 1);
         led_put(nl, 14u + k, (int)((lit >> k) & 1u));
@@ -373,6 +423,10 @@ static void cb_draw_head(void)
         for (i = 0; i < NPART; i++) {
             int32_t x = 3 + 59 * (int32_t)i;
             cb_num(b, (int32_t)cb_mix[i] * 100 / 127, "");
+            if ((cb_mute >> i) & 1u)
+                b[0] = 'M', b[1] = 0;
+            else if (cb_solo == i)
+                b[0] = 'S', b[1] = 0;
             cv_rrect(x, 28, 57, 44, 6, cb_rgb(CB_COLORS[cbu.color & 7u], 2), 0);   /* (como las otras tarjetas) */
             (void)IC;
             cb_text_c(x + 28, 31, &AF_S, LB[i], cbu.mid);
@@ -410,7 +464,7 @@ static void cb_draw_panel(void)
             cb_spr(x, 2, SPR_FX_CINTA_ATRAS, cbu.ramp);
             x += 28;
         }
-        for (k = 0; k < 4u; k++)
+        for (k = 0; k < CB_NPUSH; k++)
             if (cbu.push[k]) {
                 cb_spr(x, 2, CB_PUSH[k].icon, cbu.ramp);
                 x += 28;
@@ -519,8 +573,30 @@ static void cb_follow(void)
     cbu.card_r = r;
     cbu.rkind = kind;
 }
+static void cb_draw_loading(void)        /* mientras el instalador escribe los samples */
+{
+    uint32_t w = cb_load_off * 200u / 81920u;
+    cv_begin(240, 122, 0);
+    cb_text_c(120, 34, &AF_M, "CARGANDO SONIDOS", cbu.fg);
+    cv_rrect(20, 66, 200, 12, 4, cbu.dim, 0);
+    cv_rect(20, 66, (int32_t)(w > 200u ? 200u : w), 12, cbu.fg);
+    cb_text_c(120, 88, &AF_S, "NO DESCONECTES EL FM-1", cbu.mid);
+    cv_blit(0, 76);
+}
 static void cb_ui_draw(void)
 {
+    static uint32_t last_off = 0xFFFFFFFFu;
+    if (cb_loading) {
+        if (cb_loading == 2u || fm1_ms - cb_load_ms > 5000u)
+            cb_loading = 0, cbu.dirty = 7;
+        else {
+            if (cb_load_off != last_off) {
+                last_off = cb_load_off;
+                cb_draw_loading();
+            }
+            return;
+        }
+    }
     static uint32_t last_reb = 0xFF;
     if (cbc.reb != last_reb) {
         last_reb = cbc.reb;

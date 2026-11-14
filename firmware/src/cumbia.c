@@ -25,7 +25,13 @@ static struct {
     uint8_t rev;                         /* reverb 0..20 */
     uint8_t eco, bb;                     /* eco de sonidero, boom bap */
     volatile uint8_t cinta;              /* 1 mientras se mantiene la cinta para atrás */
-} cbc = {0, 0, 0, 10, 0, 0, 0};   /* (el eco empieza apagado: LFO lo prende) */
+    uint8_t semi;                        /* OCT+: medio punto arriba en vivo */
+    uint8_t sent;                        /* ALGORITHM: sentimiento 0 (máquina) .. 10 (suelto); 5 = el prototipo */
+    uint8_t dens;                        /* PRESETS: percusión 0 la de la canción, 1 nada, 2 güiro, 3 ligera, 4 completa */
+    volatile uint8_t corte;              /* EDIT: bajo y percusión fuera (1), regresan en el siguiente tiempo (2) */
+} cbc = {0, 0, 0, 10, 0, 0, 0, 0, 5, 0, 0};   /* (el eco empieza apagado: LFO lo prende) */
+static volatile uint32_t cb_load_ms, cb_load_off;   /* editor.c: los samples que llegan (cumbia_ui.c: la barra) */
+static volatile uint8_t cb_loading;
 static int32_t cb_tn = 64;               /* la tónica de la canción: el relativo menor del tono del acordeón */
 
 /* ---------------------------------------------------------------- azar --- */
@@ -42,8 +48,9 @@ static uint32_t cb_rnd(void)             /* mulberry32 (el del prototipo): la mi
 static uint32_t cb_pick(uint32_t n) { return (uint32_t)(((uint64_t)cb_rnd() * n) >> 32); }
 static int cb_chance(uint32_t pct) { return cb_pick(100u) < pct; }
 static uint32_t cb_hum = 0x1234567u;     /* humanización (no forma parte de la canción) */
-static int32_t cb_jit(int32_t span)      /* -span/2 .. span/2 */
+static int32_t cb_jit(int32_t span)      /* -span/2 .. span/2 (el sentimiento lo escala: 0 nada, 5 normal, 10 doble) */
 {
+    span = span * (int32_t)cbc.sent / 5;
     cb_hum = cb_hum * 1664525u + 1013904223u;
     return span ? (int32_t)((cb_hum >> 8) % (uint32_t)span) - span / 2 : 0;
 }
@@ -570,19 +577,25 @@ static void cb_play_step(uint32_t g)
         if (b % 2u == 0)
             perc_hit(GI_HAT, sw, 40);
     }
-    if (s->perc != PC_NADA || cbc.bb) {
+    {
+        static const uint8_t DENS[5] = {0, PC_NADA, PC_GUIRO, PC_LIGERA, PC_FULL};
+        uint32_t pc = cbc.dens ? DENS[cbc.dens] : s->perc;
+    if (pc != PC_NADA || cbc.bb) {
         uint32_t gs = g % CB_GROOVE_STEPS;
         for (k = CB_GROOVE_IDX[gs]; k < CB_GROOVE_IDX[gs + 1u]; k++) {
             const cb_hit_t *h = &CB_GROOVE[k];
-            if (cbc.bb ? h->inst <= GI_CONGA2 || h->inst == GI_GUIRO_L || h->inst == GI_GUIRO_S : inst_ok(h->inst, s->perc))
+            if (cbc.bb ? h->inst <= GI_CONGA2 || h->inst == GI_GUIRO_L || h->inst == GI_GUIRO_S : inst_ok(h->inst, pc))
                 perc_hit(h->inst, (int32_t)((uint32_t)h->frac * sd / 256u), cbc.bb ? h->vel * 3 / 10 : h->vel * 3 / 2);   /* (con el boom bap, la cumbia detrás) */
         }
+    }
     }
 }
 
 /* -------------------------------------------------------- transporte --- */
 static const int16_t CB_LEVEL[NPART] = {116, 88, 92, 112};   /* acordeón, bajo, percusión, gritos */
-static uint8_t cb_mix[NPART] = {116, 88, 92, 112};           /* la mezcla (GLO: cumbia_ui.c) */
+static uint8_t cb_mix[NPART] = {116, 88, 92, 124};           /* la mezcla (GLO: cumbia_ui.c) */
+static uint8_t cb_mute;                  /* bit i: la pista i callada (GLO + FX, SCL, ENV, LFO) */
+static uint8_t cb_solo = 0xFF;           /* la pista sola (GLO mantenido + FX, SCL, ENV, LFO), 0xFF ninguna */
 static void cb_levels(void)              /* los niveles de las pistas (el boom bap, al mismo nivel que la cumbia) */
 {
     uint32_t i;
@@ -590,6 +603,9 @@ static void cb_levels(void)              /* los niveles de las pistas (el boom b
         uint32_t v = cb_mix[i];
         if (i == CB_PERC && cbc.bb)
             v = v * 11u / 10u;            /* el boom bap con impacto, a medio camino (+3 dB fue demasiado) */
+        if (((cb_mute >> i) & 1u) || (cb_solo < NPART && cb_solo != i) ||
+            (cbc.corte == 1u && (i == CB_BAJO || i == CB_PERC)))
+            v = 0;                        /* callada: el nivel a 0 (P_MUTE solo frena las notas nuevas) */
         trk[i].p[P_LEVEL] = (int16_t)(v > 127u ? 127u : v);
     }
 }
@@ -725,6 +741,7 @@ static void cb_back_seed(void)           /* la canción anterior */
     cb_nprev--;
     cb_generate(cb_prev_seed[cb_nprev % 8u]);
 }
+static uint32_t cb_nsteps;               /* pasos tocados desde PLAY (tests/cumbia_sim.c: el tempo) */
 static volatile uint8_t cb_kill;         /* apagar todo en el contexto de audio (cumbia_tick): sin carreras */
 static void cumbia_start(void)
 {
@@ -733,6 +750,7 @@ static void cumbia_start(void)
         cb_new_seed();
     cb_step = 0;
     cb_pos = 0;
+    cb_nsteps = 0;
     cb_play = 1;
     cb_end = 0;
     cb_done = 0;
@@ -745,27 +763,30 @@ static void cumbia_stop(void)
 }
 
 /* ------------------------------------------------------------- gritos --- */
-/* tools/gen_gritos.py: USR2 los cinco gritos autorizados, USR3 las frases nuevas. El grito j de una ranura suena tal
- * como se grabó en la tecla 12 + 20 j (la rebajada lo frena con todo lo demás) */
-#define CB_NVOZ 8u                       /* wepa, cumbia, opa, a bailar, Monterrey; wewea, pagozar, ave */
+/* tools/gen_gritos.py: los gritos en USR2 y USR3 (en una sola no caben). El grito j de una ranura suena tal como se
+ * grabó en la tecla 12 + 18 j (la rebajada lo frena con todo lo demás) */
+#define CB_NVOZ 11u
+static const uint8_t CB_GRITO[CB_NVOZ][2] = {   /* tecla negra 1..11 (de abajo hacia arriba): ranura, grito */
+    {1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4},     /* wepa, cumbia, opa, a bailar, Monterrey */
+    {2, 0}, {2, 1}, {1, 6},                     /* wewea, pagozar, ave */
+    {1, 5}, {2, 2}, {2, 3}};                    /* escuchen esto, es tu música, oh oh oh */
 static volatile uint8_t cb_grito_on;     /* el último grito disparado + 1 (cumbia_ui.c: el micrófono) */
 static void cb_grito(uint32_t i)         /* contexto de audio (keyboard_block) */
 {
     int32_t at = 0, m;
-    uint32_t slot, j;
+    uint32_t slot;
     if (!cb_voz)
         return;
     i %= CB_NVOZ;
-    if (i >= 5u && !usr_nz[2])
-        i -= 5u;                          /* (sin USR3: los de USR2) */
-    slot = i < 5u ? 1u : 2u;
-    j = i < 5u ? i : i - 5u;
+    slot = CB_GRITO[i][0];
+    if (!usr_nz[slot])
+        return;
     if (cb_play) {                       /* en la siguiente corchea */
         at = (int32_t)(cb_len16 > cb_pos ? cb_len16 - cb_pos : 0);
         if (cb_step % 2u)
             at += (int32_t)cb_len16;
     }
-    m = 12 + 20 * (int32_t)j;
+    m = 12 + 18 * (int32_t)CB_GRITO[i][1];
     if (cb_nq + 2u <= CB_NQ) {
         cb_q[cb_nq++] = (cb_q_t){at, CB_VOZ, (uint8_t)m, 110, (uint8_t)slot};   /* (gen de un note-on: la ranura) */
         q_put(at + (int32_t)FS * 3, CB_VOZ, m, 0);
@@ -775,7 +796,7 @@ static void cb_grito(uint32_t i)         /* contexto de audio (keyboard_block) *
 
 /* ---------------------------------------------------- teclado del FM-1 --- */
 /* las teclas blancas tocan el acordeón en la escala de la canción (menor natural desde la tónica); las negras, los
- * gritos (los ocho en orden, de abajo hacia arriba, y de nuevo). Contexto de audio (seq.c keyboard_block) */
+ * gritos (los once en orden, de abajo hacia arriba: CB_GRITO). Contexto de audio (seq.c keyboard_block) */
 static const uint8_t CB_KB_WHITE[27] = {0, 0xFF, 1, 0xFF, 2, 0xFF, 3, 4, 0xFF, 5, 0xFF, 6, 7, 0xFF, 8, 0xFF, 9, 0xFF, 10, 11,
     0xFF, 12, 0xFF, 13, 14, 0xFF, 15};
 static const uint8_t CB_KB_BLACK[27] = {0, 1, 0, 2, 0, 3, 0, 0, 4, 0, 5, 0, 0, 6, 0, 7, 0, 8, 0, 0, 9, 0, 10, 0, 0, 11, 0};
@@ -826,9 +847,13 @@ static void cumbia_tick(uint32_t n)
             cb_rate_step();
             cb_len16 = cb_len16_now();
             if (cb_step >= cb.start[cb.nsec])
-                cb_end = 1;                                   /* fin: deja sonar el último acorde */
-            else
-                cb_play_step(cb_step++);
+                cb_step = 0;                                  /* fin: la canción vuelve a empezar (el dado la cambia) */
+            if (cbc.corte == 2u && !(cb_step % 4u)) {         /* el corte suelto: todo regresa en el tiempo */
+                cbc.corte = 0;
+                cb_levels();
+            }
+            cb_play_step(cb_step++);
+            cb_nsteps++;
         }
     } else {
         cb_rate = cb_rate_tgt();

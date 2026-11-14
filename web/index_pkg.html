@@ -62,7 +62,7 @@ const $ = (id) => document.getElementById(id);
 const TEXT = {
   ja: {
     intro: "FM-1 を USB で接続してください。（Chrome か Edge で使えます）",
-    warn: "書き込み中は USB を抜かないでください。",
+    warn: "書き込み中は USB を抜かないでください。途中で FM-1 が再起動し（数秒画面が消えます）、そのあと音を読み込みます。",
     install: "インストール", other: "English",
     editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
@@ -90,11 +90,11 @@ const TEXT = {
     badpkg: "インストールするファイルが壊れています。ページを再読み込みしてください。",
     leave: "書き込み中です。ページを閉じないでください。",
     license: "GPL-3.0、無保証。ソース:",
-    kit: "サンプルを書き込み中 ", kitFail: "サンプルを書き込めませんでした: ",
+    kit: "2/2 音: 書き込み中 ", kitFail: "サンプルを書き込めませんでした: ",
   },
   en: {
     intro: "Connect the FM-1 by USB. (Works in Chrome or Edge.)",
-    warn: "Do not unplug the USB cable while writing.",
+    warn: "Do not unplug the USB cable while writing. Halfway through, the FM-1 restarts (the screen goes dark for a few seconds); then it loads the sounds.",
     install: "Install", other: "日本語",
     editor: "Editor (after installing: edit sounds and sequences from the computer)",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
@@ -109,8 +109,8 @@ const TEXT = {
     stockUnsupported: "This Felucca does not support complete backups. Install the current Felucca first.",
     backup: "Saving complete backup ", stockError: "Cannot validate official firmware: ",
     nomidi: "This browser cannot do it. Open the page in Chrome or Edge.", loadfail: "Could not load: ",
-    start: "Starting", verify: "Verifying", loader: "Switching to update mode", write: "Writing",
-    reboot: "Restarting", done: "Done", stopped: "Stopped. Replug the USB cable and press Install again.",
+    start: "1/2 Firmware: starting", verify: "1/2 Firmware: verifying", loader: "1/2 Firmware: switching to update mode", write: "1/2 Firmware: writing",
+    reboot: "1/2 Firmware: restarting (the screen goes dark for a moment)", done: "Done", stopped: "Stopped. Replug the USB cable and press Install again.",
     error: "Error: ",
     denied: "MIDI (SysEx) access was not allowed. Allow MIDI in the site settings (address bar) and press Install again.",
     notfound: "FM-1 not found. Check the USB cable (a data cable), close other apps that use MIDI, and press Install again.",
@@ -122,7 +122,7 @@ const TEXT = {
     badpkg: "The file to install is damaged. Reload the page.",
     leave: "Writing. Do not close the page.",
     license: "GPL-3.0, no warranty. Source:",
-    kit: "Writing the samples ", kitFail: "Could not write the samples: ",
+    kit: "2/2 Sounds: writing ", kitFail: "Could not write the sounds: ",
   },
 };
 let lang = (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";

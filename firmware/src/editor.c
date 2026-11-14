@@ -628,6 +628,11 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
             }
             if (!rc && fl_write(ed_smp_slot(a[0]) + off, ed_smp_buf, len))
                 rc = 3;
+            if (!rc) {                                     /* cumbia_ui.c: "CARGANDO SONIDOS" con su barra */
+                cb_load_off = off;
+                cb_load_ms = fm1_ms;
+                cb_loading = 1;
+            }
         }
         ed_b(a[0]);
         ed_b(off);
@@ -641,6 +646,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
             return;
         ed_b(a[0]);
         ed_b((uint32_t)ed_smp_end(a[0], a + 1, na - 1u));
+        if (cb_loading)
+            cb_loading = 2;                                /* (cumbia_ui.c: de vuelta a la pantalla) */
         break;
     case ED_SMP_INFO:                                      /* -> per slot: zones (0 = empty), name, data KiB */
         ed_b(SMP_USER_SLOTS);
