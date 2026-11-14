@@ -163,8 +163,14 @@ async function loadKit(midi, up) {
   if (!dev) throw new Error("FM-1");
   const input = dev.link.input, output = dev.link.output; dev.link.close();
   const link = new BackupConnection(input, output);
+  const rq = async (r, timeout, tries = 3) => {   /* una respuesta perdida (borrar un sector tarda): otra vez */
+    for (let i = 1; ; i++) {
+      try { return await link.request(r, { timeout }); }
+      catch (e) { if (i >= tries) throw e; log(`reintento ${r[0]}`); await new Promise((ok) => setTimeout(ok, 300)); }
+    }
+  };
   try {
-    const info = await link.request([15, []]);
+    const info = await rq([15, []], 3000);
     const slots = [];
     for (let i = 0, p = 2; i < info[0]; i++) {
       const nz = info[p], end = info.indexOf(0, p + 1);
@@ -175,17 +181,17 @@ async function loadKit(midi, up) {
     for (const [k, S] of todo) {
       const hdr = b64(S.hdr), data = b64(S.data);
       if (slots[k] && slots[k].nz === hdr[6] && slots[k].name === S.name) { log(`ranura ${k + 1} ok`); continue; }
-      let r = await link.request([11, [k]], { timeout: 3000 });
+      let r = await rq([11, [k]], 8000, 2);
       if (r[1]) throw new Error("begin rc " + r[1]);
       for (let off = 0; off < data.length; off += 256) {
         const a = 512 + off;
-        r = await link.request([12, [k, a & 0x7F, (a >> 7) & 0x7F, (a >> 14) & 0x7F, ...edPack7(data.subarray(off, off + 256))]], { timeout: 3000 });
+        r = await rq([12, [k, a & 0x7F, (a >> 7) & 0x7F, (a >> 14) & 0x7F, ...edPack7(data.subarray(off, off + 256))]], 5000);
         if (r[4]) throw new Error(`write ${a} rc ${r[4]}`);
         const pct = Math.min(1, (off + 256) / data.length);
         sayK("kit", `${k + 1}/3 ${Math.round(pct * 100)}%`);
         $("bar").value = pct * 100;
       }
-      r = await link.request([13, [k, ...edPack7(hdr)]], { timeout: 4000 });
+      r = await rq([13, [k, ...edPack7(hdr)]], 10000, 2);
       if (r[1]) throw new Error("end rc " + r[1]);
       log(`ranura ${k + 1} escrita`);
     }
