@@ -100,7 +100,8 @@ SLC_PIANO_NOTE = 60                          # SLICE's SRC PIANO: the PIANO zone
 SLC_GRID, SLC_AUTO = 128, 32                # eng_slice.c slc_src_t
 
 ENV = {"wave":(5, 80, 100, 50), "kit": (0, 127, 127, 60), "multi": (0, 85, 0, 75),
-       "oneshot": (0, 127, 127, 70), "sus": (12, 80, 120, 60)}
+       "oneshot": (0, 127, 127, 70), "sus": (12, 80, 120, 60),
+       "acord": (44, 80, 120, 60)}   # acord: ATK 44 = ~23 ms, el arranque de un botón real (con 12 sonaba a golpe)
 
 # PIANO's notes cut to 0.75 s (saves flash), faded out over the last SET_FADE s
 SET_KEEP = {"PIANO": 0.75}
@@ -331,7 +332,7 @@ class Builder:
             off, st = self.add(s, ls)
             entries.append(dict(off=off, n=len(s), ls=ls, le=le, looped=True, sr=TR,
                                 root16=int(round(meta[m]["root"] * 16)), pred=st[0], idx=st[1], key=None))
-        self.add_set(name, "sus", entries)
+        self.add_set(name, "acord", entries)
 
     def cc0_set(self, name, kind):
         entries = []
