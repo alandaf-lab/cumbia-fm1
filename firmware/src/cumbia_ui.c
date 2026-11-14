@@ -309,7 +309,7 @@ static void cb_draw_head(void)
         b[i] = 0;
     }
     cb_card(3, 28, SPR_FX_REBAJADA, b, cbc.reb != 0);
-    cb_num(b, cbc.rev * 5, "");
+    cb_num(b, cbc.rev * 5, "");   /* (0..100) */
     cb_card(62, 28, SPR_FX_REVERB, b, 0);
     cb_num(b, (int32_t)cb_bpm_now(), "");
     cb_card(121, 28, SPR_N, b, cbc.bpm != 0);

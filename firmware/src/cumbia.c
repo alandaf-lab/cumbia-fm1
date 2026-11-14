@@ -25,7 +25,7 @@ static struct {
     uint8_t rev;                         /* reverb 0..20 */
     uint8_t eco, bb;                     /* eco de sonidero, boom bap */
     volatile uint8_t cinta;              /* 1 mientras se mantiene la cinta para atrás */
-} cbc = {0, 0, 0, 6, 1, 0, 0};
+} cbc = {0, 0, 0, 10, 0, 0, 0};   /* (el eco empieza apagado: LFO lo prende) */
 static int32_t cb_tn = 64;               /* la tónica de la canción: el relativo menor del tono del acordeón */
 
 /* ---------------------------------------------------------------- azar --- */
@@ -618,7 +618,7 @@ static void cb_sends(void)
     static const uint8_t REV_W[NPART] = {100, 35, 80, 100};
     uint32_t i;
     for (i = 0; i < NPART; i++) {
-        trk[i].p[P_REV] = (int16_t)(cbc.rev * 5u * REV_W[i] / 100u);
+        trk[i].p[P_REV] = (int16_t)(cbc.rev * 127u / 20u * REV_W[i] / 100u);
         trk[i].p[P_DLY] = 0;
         trk[i].p[P_CHOR] = 0;
     }
@@ -628,7 +628,7 @@ static void cb_sends(void)
     song.g[G_DCOLOR] = 33;                /* ~2.5 kHz */
     song.g[G_DMIX] = 90;
     song.g[G_RTYPE] = 0;                  /* ROOM: corta y oscura */
-    song.g[G_RSIZE] = 70;
+    song.g[G_RSIZE] = 90;
     song.g[G_RDAMP] = 80;
 }
 static void cumbia_tracks(void)          /* las cuatro pistas con los sonidos de la cumbia (aunque el proyecto guardado traiga
@@ -673,7 +673,7 @@ static uint32_t cb_bpm_now(void)         /* (sin canción todavía, al encender:
 static uint32_t cb_len16_now(void)       /* muestras por 16avo al tempo de la cinta */
 {
     uint32_t q8 = ((uint32_t)FS * 15u << 8) / cb_bpm_now();   /* Q8, a velocidad normal (sin división de 64 bits) */
-    return (q8 << 8) / (cb_rate >> 8);
+    return ((q8 << 8) / (cb_rate >> 8)) >> 8;           /* (Q8 / Q16 x Q16 -> Q8: >> 8, muestras) */
 }
 static void cb_tune_block(uint32_t n)    /* G_TUNE: la cinta lenta, más el vaivén (solo se oye en rebajada) */
 {
@@ -868,7 +868,7 @@ static void cumbia_post(int32_t *l, int32_t *r, int32_t *wet, uint32_t n)
     int32_t lg = (int32_t)LO[pc > 40u ? 40u : pc] - 4096, hg = HI[pc > 40u ? 40u : pc];
     if (cbc.cinta && !cr_on) {
         cr_on = 1;
-        cr_rd = (cr_w - 1u) << 16;
+        cr_rd = ((cr_w - 1u) & (CR_N - 1u)) << 16;
         cr_spd = 16384;                                       /* 0.25 */
     }
     for (i = 0; i < n; i++) {
@@ -884,7 +884,8 @@ static void cumbia_post(int32_t *l, int32_t *r, int32_t *wet, uint32_t n)
         if (!cr_on) {
             cr_acc += (x[0] + x[1]) >> 1;
             if (++cr_k == 4u) {
-                buf[cr_w++ & (CR_N - 1u)] = cr_mulaw(cr_acc >> 4);   /* (la mezcla está a x4: >> 2 más) */
+                buf[cr_w] = cr_mulaw(cr_acc >> 4);
+                cr_w = (cr_w + 1u) & (CR_N - 1u);   /* (la posición en Q16 cabe en 32 bits: CR_N << 16 = 2^31) */   /* (la mezcla está a x4: >> 2 más) */
                 cr_acc = 0;
                 cr_k = 0;
             }
@@ -892,9 +893,9 @@ static void cumbia_post(int32_t *l, int32_t *r, int32_t *wet, uint32_t n)
             uint32_t p = cr_rd >> 16, f = cr_rd & 0xFFFFu;
             int32_t s0 = cr_unmu(buf[p & (CR_N - 1u)]), s1 = cr_unmu(buf[(p + 1u) & (CR_N - 1u)]);
             int32_t y = (s0 + (((s1 - s0) * (int32_t)(f >> 1)) >> 15)) << 2;
-            cr_rd -= cr_spd >> 2;                             /* la cinta va a 1/4 de la frecuencia */
-            if (cr_w - 1u - (cr_rd >> 16) > CR_LOOP)
-                cr_rd += CR_LOOP << 16;
+            cr_rd = (cr_rd - (cr_spd >> 2)) & 0x7FFFFFFFu;    /* la cinta va a 1/4 de la frecuencia */
+            if (((cr_w - 1u - (cr_rd >> 16)) & (CR_N - 1u)) > CR_LOOP)
+                cr_rd = (cr_rd + (CR_LOOP << 16)) & 0x7FFFFFFFu;
             if (cbc.cinta) {
                 cr_g += (32767 - cr_g) >> 6;                  /* ~1.5 ms */
                 cr_main -= cr_main >> 8;                       /* ~6 ms */

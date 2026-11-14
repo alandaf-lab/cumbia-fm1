@@ -67,6 +67,10 @@ int main(int argc, char **argv)
     cb_press(B_PLAY);
     run_ms(3000);
     shot(d, "2_tocando");
+    run_ms(200);
+    shot(d, "2b_tocando");
+    run_ms(200);
+    shot(d, "2c_tocando");
     host_enc[panel.enc[EN_K1]] = 25;
     host_enc[panel.enc[EN_K2]] = 4;
     run_ms(2000);

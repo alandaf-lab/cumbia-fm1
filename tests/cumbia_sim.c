@@ -82,5 +82,12 @@ int main(int argc, char **argv)
     fclose(w);
     printf("máx por pista: acordeón %u, bajo %u, percusión %u, gritos %u; bloques con las 8 voces ocupadas: %u%%\n", pmax[0], pmax[1], pmax[2], pmax[3], full * 100u / blocks);
     printf("voces a la vez (máx): %u, muestras saturadas: %u, al final tocando: %u; TUNE %d, BPM %d, paso %u\n", vmax, clips, cb_play, song.g[G_TUNE], song.g[G_BPM], cb_step);
+    {                                         /* el tempo: los pasos que debieron sonar (sin rebajada ni fin de canción) */
+        uint32_t want = (uint32_t)((uint64_t)cb.bpm * 4u * secs / 60u);
+        if (!cbc.reb && cb_play && (cb_step + 3u < want || cb_step > want + 3u)) {
+            printf("FALLA: %u pasos en %u s, debían ser %u\n", cb_step, secs, want);
+            return 1;
+        }
+    }
     return 0;
 }
