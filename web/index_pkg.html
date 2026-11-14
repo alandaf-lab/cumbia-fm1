@@ -90,6 +90,7 @@ const TEXT = {
     badpkg: "インストールするファイルが壊れています。ページを再読み込みしてください。",
     leave: "書き込み中です。ページを閉じないでください。",
     license: "GPL-3.0、無保証。ソース:",
+    kit: "打楽器のサンプルを書き込み中 ", kitFail: "打楽器のサンプルを書き込めませんでした: ",
   },
   en: {
     intro: "Connect the FM-1 by USB. (Works in Chrome or Edge.)",
@@ -121,6 +122,7 @@ const TEXT = {
     badpkg: "The file to install is damaged. Reload the page.",
     leave: "Writing. Do not close the page.",
     license: "GPL-3.0, no warranty. Source:",
+    kit: "Writing the percussion samples ", kitFail: "Could not write the percussion samples: ",
   },
 };
 let lang = (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";
@@ -139,6 +141,46 @@ const say = (txt) => { lastKey = null; $("status").textContent = txt; };
 const log = (t) => { $("log").textContent += t + "\n"; };
 let image = null;
 const meta = /*META*/;
+/*KIT*/
+const edPack7 = (b) => {                   /* el empaquetado del editor (editor.html pack7), no el de la OTA */
+  const out = [];
+  for (let i = 0; i < b.length; i += 7) {
+    const g = Array.from(b.slice(i, i + 7));
+    out.push(g.reduce((m, x, j) => m | (((x >> 7) & 1) << j), 0));
+    for (const x of g) out.push(x & 0x7F);
+  }
+  return out;
+};
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+/* cumbia: la percusión (tools/gen_kit.py) en la ranura USR1, si no está ya; protocolo SMP_BEGIN / WRITE / END */
+async function loadKit(midi, up) {
+  let dev = null;
+  for (let i = 0; i < 20 && !dev; i++) {
+    dev = await up.find((id) => id.model === "FM-1");
+    if (!dev) await new Promise((r) => setTimeout(r, 500));
+  }
+  if (!dev) throw new Error("FM-1");
+  const input = dev.link.input, output = dev.link.output; dev.link.close();
+  const link = new BackupConnection(input, output);
+  try {
+    const hdr = b64(KIT_PERC.hdr), data = b64(KIT_PERC.data);
+    const info = await link.request([15, []]);
+    let nz = info[2], end = info.indexOf(0, 3), name = String.fromCharCode(...info.slice(3, end < 0 ? 3 : end));
+    if (nz === hdr[6] && name === KIT_PERC.name) { log("kit ok"); return; }
+    let r = await link.request([11, [0]], { timeout: 3000 });
+    if (r[1]) throw new Error("begin rc " + r[1]);
+    for (let off = 0; off < data.length; off += 256) {
+      const a = 512 + off;
+      r = await link.request([12, [0, a & 0x7F, (a >> 7) & 0x7F, (a >> 14) & 0x7F, ...edPack7(data.subarray(off, off + 256))]], { timeout: 3000 });
+      if (r[4]) throw new Error(`write ${a} rc ${r[4]}`);
+      sayK("kit", `${Math.round(Math.min(1, (off + 256) / data.length) * 100)}%`);
+      $("bar").value = Math.min(1, (off + 256) / data.length) * 100;
+    }
+    r = await link.request([13, [0, ...edPack7(hdr)]], { timeout: 4000 });
+    if (r[1]) throw new Error("end rc " + r[1]);
+    log("kit escrito");
+  } finally { link.close(); }
+}
 
 let writing = false, stock = null, stockFileEpoch = 0;
 const lockInstaller = (on) => { writing = on; $("go").disabled = on || !image; $("stock-go").disabled = on || !stock; $("stock-file").disabled = on; $("stock-recovery").disabled = on; };
@@ -176,11 +218,17 @@ $("go").addEventListener("click", async () => {
       if (k === "done") { $("bar").value = 100; sayK("done"); }
     };
     const ota = await up.find((id) => /^ota-/i.test(id.model));
+    let ok = true;
     if (ota) {
       ota.link.close();
-      sayK((await up.resume(image, step, meta.product)) ? "done" : "stopped");
+      ok = await up.resume(image, step, meta.product);
+      sayK(ok ? "done" : "stopped");
     } else {
       await up.install(image, meta.product, step);
+    }
+    if (ok) {
+      try { await loadKit(midi, up); sayK("done"); }
+      catch (e) { sayK("kitFail", e.message); log(String(e && e.stack || e)); }
     }
   } catch (e) {
     if (e && e.code && TEXT[lang][e.code]) sayK(e.code, e.detail || "");

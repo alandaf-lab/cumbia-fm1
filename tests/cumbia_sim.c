@@ -1,9 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* La canción de cumbia renderizada en la computadora (el mismo código del FM-1):
  *   build/host/cumbia_sim SEMILLA SEGUNDOS OUT.wav */
+static unsigned char host_slots[3][0x14000];          /* KIT=1: build/kit_perc.hdr/.bin en USR1 (tools/gen_kit.py) */
+#define SMP_USER_XIP(k) ((const uint8_t *)host_slots[k])
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
+static void set_engine_of(track_t *t, uint32_t ei) { host_preset(t, ei, 0); }      /* (ui.c en el FM-1) */
+static void apply_preset_to(track_t *t, uint32_t pi) { host_preset(t, t->eng_req, pi); }
 int main(int argc, char **argv)
 {
     uint32_t seed = argc > 1 ? (uint32_t)atoi(argv[1]) : 1u, secs = argc > 2 ? (uint32_t)atoi(argv[2]) : 30u, f, i;
@@ -14,6 +18,18 @@ int main(int argc, char **argv)
     for (i = 0; i < NPART; i++) {
         host_preset(&trk[i], TRK_DEF[i][0], TRK_DEF[i][1]);
         trk[i].p[P_LEVEL] = CB_LEVEL[i];
+    }
+    if (getenv("KIT")) {
+        FILE *a = fopen("build/kit_perc.hdr", "rb"), *b = fopen("build/kit_perc.bin", "rb");
+        if (!a || !b || !fread(host_slots[0], 1, 512, a) || !fread(host_slots[0] + 512, 1, sizeof host_slots[0] - 512, b))
+            return 1;
+        fclose(a);
+        fclose(b);
+        smp_user_scan(0);
+        host_preset(&trk[CB_PERC], ENGI_SAMPLE, 0);
+        trk[CB_PERC].p[P_LEVEL] = CB_LEVEL[CB_PERC];
+        cb_perc_setup();
+        printf("kit: %u zonas\n", usr_nz[0]);
     }
     cb_next_seed = seed;
     if (getenv("SOLO"))                       /* SOLO=k: solo la pista k (0..3) */

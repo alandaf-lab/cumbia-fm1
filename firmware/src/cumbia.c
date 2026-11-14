@@ -333,6 +333,8 @@ static void cb_generate(uint32_t seed)
 
 /* ----------------------------------------------------- percusión (GM) --- */
 #include "cumbia_groove.h"                                    /* CB_GROOVE[]: la cumbia lenta, 8 compases (tools/gen_cumbia.py) */
+#define CB_KIT_KEY0 48u          /* el kit en USR1 (tools/gen_kit.py): instrumento i en la tecla CB_KIT_KEY0 + i */
+static uint8_t cb_kit;           /* 1 = la pista de percusión toca el kit de USR1; 0 = DRUM (notas GM) */
 static uint32_t inst_ok(uint32_t inst, uint32_t perc)
 {
     switch (perc) {
@@ -372,10 +374,28 @@ static void note(uint32_t tr, int32_t m, int32_t at, int32_t dur, int32_t vel)
     q_put(at, tr, m, (uint32_t)vel);
     q_put(at + (dur > 64 ? dur : 64), tr, m, 0);
 }
+/* el kit de USR1 suena hasta el final de cada golpe: para no quitarle voces al acordeón ni a los acordes, la
+ * percusión usa a lo más CB_PERC_MAX voces y, con todas ocupadas, cede la suya más vieja (se apaga en un bloque) */
+#define CB_PERC_MAX 4u
+static void cb_perc_room(void)
+{
+    track_t *t = &trk[CB_PERC];
+    uint32_t i, n = 0, old = NVOICE;
+    for (i = 0; i < NVOICE; i++)
+        if (t->v[i].active && t->v[i].stage != 4u) {
+            n++;
+            if (old == NVOICE || t->v[i].age < t->v[old].age)
+                old = i;
+        }
+    if (old != NVOICE && (n >= CB_PERC_MAX || voices_busy() >= NVOICE))
+        voice_kill(&t->v[old]);
+}
 static void q_fire(cb_q_t *e)
 {
     track_t *t = &trk[e->tr];
     if (e->vel) {
+        if (e->tr == CB_PERC && cb_kit)
+            cb_perc_room();
         cb_gen[e->tr][e->note]++;
         cb_on[e->tr][e->note >> 3] |= (uint8_t)(1u << (e->note & 7u));
         trk_note_on(t, e->note, e->vel);
@@ -505,7 +525,7 @@ static void cb_play_step(uint32_t g)
         for (k = CB_GROOVE_IDX[gs]; k < CB_GROOVE_IDX[gs + 1u]; k++) {
             const cb_hit_t *h = &CB_GROOVE[k];
             if (inst_ok(h->inst, s->perc))
-                note(CB_PERC, GI_NOTE[h->inst], (int32_t)((uint32_t)h->frac * sd / 256u), (int32_t)sd, h->vel * 3 / 2);
+                note(CB_PERC, cb_kit ? CB_KIT_KEY0 + h->inst : GI_NOTE[h->inst], (int32_t)((uint32_t)h->frac * sd / 256u), (int32_t)(cb_kit ? sd / 4 : sd), h->vel * 3 / 2);
         }
     }
 }
@@ -515,13 +535,34 @@ static const int16_t CB_LEVEL[NPART] = {116, 88, 120, 104};   /* acordeón, bajo
 static void set_engine_of(track_t *t, uint32_t ei);         /* ui.c */
 static void apply_preset_to(track_t *t, uint32_t pi);
 static void track_defaults_steps(track_t *t);
+/* la pista de percusión: los one-shots de USR1 si el instalador los cargó, si no la batería DRUM de Felucca.
+ * Al encender (cumbia_tracks) y al terminar de escribirse la ranura (editor.c); ciclo principal */
+static void cb_perc_setup(void)
+{
+    track_t *t = &trk[CB_PERC];
+    cb_kit = usr_nz[0] != 0;
+    if (cb_kit) {
+        if (t->eng_req != ENGI_SAMPLE)
+            set_engine_of(t, ENGI_SAMPLE);
+        t->p[P_E0] = SMP_NSETS;           /* SET USR1 */
+        t->p[P_E1] = 0;                   /* TONE: la altura grabada */
+        t->p[P_E3] = 0;                   /* sin LOOP: cada golpe una vez */
+        t->p[P_ATK] = 0;
+        t->p[P_DEC] = 127;
+        t->p[P_SUS] = 127;
+        t->p[P_REL] = 88;                 /* la cola suena entera aunque la nota dure un paso */
+    } else if (t->eng_req != ENGI_DRUM) {
+        set_engine_of(t, ENGI_DRUM);
+        apply_preset_to(t, 0);
+    }
+}
 static void cumbia_tracks(void)          /* las cuatro pistas con los sonidos de la cumbia (aunque el proyecto guardado traiga
                                           * otros): main.c al encender, después de restaurar la última sesión (contexto de la UI) */
 {
     uint32_t i;
     for (i = 0; i < NPART; i++) {
         track_t *t = &trk[i];
-        if (t->eng_req != TRK_DEF[i][0] || t->preset != TRK_DEF[i][1]) {
+        if (i != CB_PERC && (t->eng_req != TRK_DEF[i][0] || t->preset != TRK_DEF[i][1])) {
             set_engine_of(t, TRK_DEF[i][0]);
             apply_preset_to(t, TRK_DEF[i][1]);
         }
@@ -529,6 +570,7 @@ static void cumbia_tracks(void)          /* las cuatro pistas con los sonidos de
         t->p[P_LEVEL] = CB_LEVEL[i];      /* la mezcla del prototipo: acordeón al frente, percusión presente */
         track_defaults_steps(t);          /* sin patrones guardados: suena solo la canción */
     }
+    cb_perc_setup();
 }
 static void cumbia_start(void)
 {

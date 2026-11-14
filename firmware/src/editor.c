@@ -118,6 +118,8 @@ static int ed_smp_end(uint32_t k, const uint8_t *a, uint32_t na)
         return 4;
     ed_smp_inval(k);
     smp_user_scan(k);
+    if (!k)
+        cb_perc_setup();                               /* cumbia.c: el kit de percusión, recién cargado */
     return usr_nz[k] ? 0 : 5;
 }
 

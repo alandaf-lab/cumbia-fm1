@@ -51,10 +51,11 @@ def main(pkg, version, out):
         strip_module((HERE / "fm1backup.js").read_text(encoding="utf-8"))
     name = f"felucca-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
     meta = json.dumps({"version": version, "product": product, "pkg": "../../firmware/" + name})
-    for mark in ("/*LIB*/", "/*META*/"):
+    kit = (HERE / "kit_perc.js").read_text(encoding="utf-8")       # cumbia: tools/gen_kit.py
+    for mark in ("/*LIB*/", "/*META*/", "/*KIT*/"):
         if html.count(mark) != 1:
             raise SystemExit(f"index_pkg.html must contain {mark} once; update make_site.py")
-    html = html.replace("/*LIB*/", lib).replace("/*META*/", meta)
+    html = html.replace("/*LIB*/", lib).replace("/*META*/", meta).replace("/*KIT*/", kit)
     inst, ed, fw = out / "webapp" / "installer", out / "webapp" / "editor", out / "firmware"
     for d in (inst, ed, fw):
         d.mkdir(parents=True, exist_ok=True)
