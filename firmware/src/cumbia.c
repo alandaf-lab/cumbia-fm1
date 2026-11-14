@@ -531,7 +531,7 @@ static void cb_play_step(uint32_t g)
 }
 
 /* -------------------------------------------------------- transporte --- */
-static const int16_t CB_LEVEL[NPART] = {116, 88, 120, 104};   /* acordeón, bajo, percusión, acordes */
+static const int16_t CB_LEVEL[NPART] = {116, 88, 92, 104};   /* acordeón, bajo, percusión, acordes */
 static void set_engine_of(track_t *t, uint32_t ei);         /* ui.c */
 static void apply_preset_to(track_t *t, uint32_t pi);
 static void track_defaults_steps(track_t *t);
