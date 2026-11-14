@@ -60,6 +60,7 @@ jobs:
       - name: Compilar
         env:
           FELUCCA_SLICE: '0'   # sin el motor SLICE ni su BREAK: espacio para el acordeón
+          FELUCCA_UAC: '0'     # sin audio por USB, por ahora: espacio para la canción (vuelve al quitar motores)
         run: ./build.sh
 
       - name: Lo que más ocupa (top 120 símbolos)
