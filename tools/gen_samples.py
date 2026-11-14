@@ -70,7 +70,10 @@ TR = 22050                                   # stored sample rate
 # from the web editor). TRANH was removed (66 KB of flash); its index 1 stays, an alias of PIANO
 # ("alias": the set named). PERC (the GM kit) was removed (66 KB); its index 4 stays, an alias of
 # PIANO too (PERC_SLOT; its sounds load as the DRUM engine)
-CC0_SETS = [("PIANO", "oneshot"), ("PIANO", "alias"), ("FLUTE", "sus"), ("SAX", "sus"), ("PIANO", "alias")]
+CC0_SETS = [("PIANO", "oneshot"), ("PIANO", "alias"), ("ACORD", "cumbia"), ("SAX", "sus"), ("PIANO", "alias")]
+# cumbia: set 2 (was FLUTE) is the accordion of the cumbia firmware, from assets/samples-cumbia/ACORD:
+# WAVs at TR named by MIDI note, their loops and measured roots in loops.json (scripts/prep_acord.py)
+CUMBIA = SRC / "assets" / "samples-cumbia"
 PERC_SLOT = 4                                # core.h SMP_SET_PERC: SAMPLE's factory presets end before it
 MEASURED_TUNING = ()                         # sets whose recordings are not at A440 (was TRANH, ~+35 ct)
 
@@ -316,6 +319,20 @@ class Builder:
         self.alias[len(self.sets)] = orig
         self.sets.append(self.sets[orig])
 
+    def cumbia_set(self, name):
+        """a set prepared outside: WAVs at TR (MIDI-numbered), loops.json {midi: {ls, le, root}}; levels kept"""
+        import json
+        meta = json.loads((CUMBIA / name / "loops.json").read_text())
+        entries = []
+        for m in sorted(meta, key=int):
+            sr, x = wav(CUMBIA / name / f"{m}.wav")
+            s = [max(-32767, min(32767, int(round(v * 32767)))) for v in x]
+            ls, le = meta[m]["ls"], meta[m]["le"]
+            off, st = self.add(s, ls)
+            entries.append(dict(off=off, n=len(s), ls=ls, le=le, looped=True, sr=TR,
+                                root16=int(round(meta[m]["root"] * 16)), pred=st[0], idx=st[1], key=None))
+        self.add_set(name, "sus", entries)
+
     def cc0_set(self, name, kind):
         entries = []
         for k, (_, s, loop, root) in enumerate(cc0_entries(name, kind)):
@@ -428,6 +445,7 @@ def input_key(have_cc0):
     files = sorted(GENDIR.glob("*.wav"))
     if have_cc0:
         files += sorted(CC0.glob("*/*.wav"))
+    files += sorted(CUMBIA.glob("*/*"))
     for p in files:
         h.update(str(p.relative_to(SRC)).encode() + b"\0")
         h.update(hashlib.sha256(p.read_bytes()).digest())
@@ -453,6 +471,8 @@ def main(out):
         for name, kind in CC0_SETS:
             if kind == "alias":
                 b.alias_set(name)
+            elif kind == "cumbia":
+                b.cumbia_set(name)
             else:
                 b.cc0_set(name, kind)
     if slice_on():                                  # SLICE's BREAK: only when that engine is built
