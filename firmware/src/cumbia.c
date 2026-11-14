@@ -27,9 +27,9 @@ static struct {
     volatile uint8_t cinta;              /* 1 mientras se mantiene la cinta para atrás */
     uint8_t semi;                        /* OCT+: medio punto arriba en vivo */
     uint8_t sent;                        /* ALGORITHM: sentimiento 0 (máquina) .. 10 (suelto); 5 = el prototipo */
-    uint8_t dens;                        /* PRESETS: percusión 0 la de la canción, 1 nada, 2 güiro, 3 ligera, 4 completa */
+    uint8_t bajo;                        /* PRESETS: el bajo 0 el de la canción, 1 tumbao, 2 dub, 3 caminado, 4 saltado */
     volatile uint8_t corte;              /* EDIT: bajo y percusión fuera (1), regresan en el siguiente tiempo (2) */
-} cbc = {0, 0, 0, 10, 0, 0, 0, 0, 5, 0, 0};   /* (el eco empieza apagado: LFO lo prende) */
+} cbc = {0, 0, 0, 10, 0, 0, 0, 0, 5, 0, 0};   /* (sentimiento 5: como el prototipo) */   /* (el eco empieza apagado: LFO lo prende) */
 static volatile uint32_t cb_load_ms, cb_load_off;   /* editor.c: los samples que llegan (cumbia_ui.c: la barra) */
 static volatile uint8_t cb_loading;
 static int32_t cb_tn = 64;               /* la tónica de la canción: el relativo menor del tono del acordeón */
@@ -385,8 +385,10 @@ static void q_put(int32_t at, uint32_t tr, int32_t note, uint32_t vel)
                              vel ? 0u : cb_gen[tr][note]};
 }
 /* una nota: encendida en at (muestras desde ahora), suelta dur muestras después */
+static int32_t cb_sw;                    /* el swing del paso que se agenda (cb_play_step, el sentimiento) */
 static void note(uint32_t tr, int32_t m, int32_t at, int32_t dur, int32_t vel)
 {
+    at += cb_sw;
     vel = vel < 1 ? 1 : vel > 127 ? 127 : vel;
     if (m < 0 || m > 127)
         return;
@@ -447,9 +449,9 @@ static void acc_note(int32_t m, int32_t at, uint32_t len, uint32_t local)
     uint32_t b = local % 16u, sd = cb_len16;
     int32_t v = 256;
     if (b % 4u == 0)
-        v += 28;                                              /* tiempo fuerte */
+        v += 28 * (int32_t)cbc.sent / 5;                      /* tiempo fuerte (el sentimiento lo marca más o nada) */
     else if (b % 2u == 1u)
-        v -= 34;                                              /* semicorchea de paso */
+        v -= 34 * (int32_t)cbc.sent / 5;                      /* semicorchea de paso */
     if (len >= 3u)
         v += 18;
     v += cb_jit(36);
@@ -478,9 +480,11 @@ static const uint8_t CB_GESTO[4][3][3] = {   /* {paso, duración, staccato} */
     {{0, 4, 1}, {6, 4, 1}, {12, 3, 1}},
     {{0, 3, 1}, {14, 2, 1}},
 };
-static const int8_t CB_BAJOS[2][4][3] = {   /* {paso, intervalo, duración}: tumbao, dub */
+static const int8_t CB_BAJOS[4][4][3] = {   /* {paso, intervalo, duración}: tumbao, dub, caminado, saltado */
     {{0, 0, 3}, {6, 0, 1}, {8, -5, 3}, {14, -5, 1}},
     {{0, 0, 7}, {8, 0, 1}, {10, 7, 3}, {14, -5, 2}},
+    {{0, 0, 3}, {4, 7, 3}, {8, 12, 3}, {12, 7, 3}},   /* (PRESETS) negras: raíz, quinta, octava, quinta */
+    {{0, 0, 1}, {2, 12, 1}, {8, 0, 1}, {10, 12, 1}},  /* (PRESETS) octavas a contratiempo */
 };
 
 /* un golpe del kit (USR1: CB_KIT_KEY0 + i), o su nota GM en DRUM si el kit no está */
@@ -495,6 +499,7 @@ static volatile uint32_t cb_hits;        /* bit i: el instrumento i sonó (cumbi
 static void perc_hit(uint32_t inst, int32_t at, int32_t vel)
 {
     uint32_t m = cb_kit ? CB_KIT_KEY0 + inst : inst >= GI_KICK ? GI_GM_BB[inst - GI_KICK] : GI_NOTE[inst];
+    vel = 72 + (vel - 72) * (int32_t)(cbc.sent + 2u) / 7;     /* sentimiento: los golpes, de parejos a muy marcados */
     note(CB_PERC, (int32_t)m, at, (int32_t)(cb_kit ? cb_len16 / 4u : cb_len16), vel);
     cb_hits |= 1u << inst;
 }
@@ -507,6 +512,8 @@ static void cb_play_step(uint32_t g)
     uint32_t i = 0, local, bar, b, k, sd = cb_len16, last;
     const cb_sec_t *s;
     cb_ch_t ch;
+    cb_sw = (g % 2u) && cbc.sent > 5u ? (int32_t)(sd * (cbc.sent - 5u) * 5u / 100u) : 0;   /* sentimiento: hasta 25 % de
+                                                                                     * swing en los 16avos de paso */
     while (i + 1u < cb.nsec && cb.start[i + 1u] <= g)
         i++;
     s = &cb.sec[i];
@@ -557,11 +564,13 @@ static void cb_play_step(uint32_t g)
         }
     }
     /* bajo */
-    if (s->bajo && !(s->cut && last) && !(s->role == R_FINAL && last))
+    if (s->bajo && !(s->cut && last) && !(s->role == R_FINAL && last)) {
+        uint32_t bp = cbc.bajo ? cbc.bajo - 1u : cb.bass;     /* (PRESETS: el bajo fijo) */
         for (k = 0; k < 4u; k++)
-            if ((uint32_t)CB_BAJOS[cb.bass][k][0] == b)
-                note(CB_BAJO, cb_tn - 24 + ch.root + CB_BAJOS[cb.bass][k][1], cb_jit((int32_t)FS / 160),
-                     (int32_t)((uint32_t)CB_BAJOS[cb.bass][k][2] * sd * 88u / 100u), b == 0 ? 96 : 88);
+            if ((uint32_t)CB_BAJOS[bp][k][0] == b && CB_BAJOS[bp][k][2])
+                note(CB_BAJO, cb_tn - 24 + ch.root + CB_BAJOS[bp][k][1], cb_jit((int32_t)FS / 160),
+                     (int32_t)((uint32_t)CB_BAJOS[bp][k][2] * sd * 88u / 100u), b == 0 ? 96 : 98 - 2 * (int32_t)cbc.sent);
+    }
     /* percusión: el groove real de la cumbia lenta, con su micro-tiempo; con el boom bap, bombo y tarola con swing
      * y solo el güiro y las congas del groove, más abajo */
     if (s->role == R_FINAL && last)
@@ -578,8 +587,7 @@ static void cb_play_step(uint32_t g)
             perc_hit(GI_HAT, sw, 40);
     }
     {
-        static const uint8_t DENS[5] = {0, PC_NADA, PC_GUIRO, PC_LIGERA, PC_FULL};
-        uint32_t pc = cbc.dens ? DENS[cbc.dens] : s->perc;
+        uint32_t pc = s->perc;
     if (pc != PC_NADA || cbc.bb) {
         uint32_t gs = g % CB_GROOVE_STEPS;
         for (k = CB_GROOVE_IDX[gs]; k < CB_GROOVE_IDX[gs + 1u]; k++) {

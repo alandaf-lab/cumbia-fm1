@@ -9,7 +9,7 @@
  *   PLAY   tocar / parar (la canción se repite hasta que la paras o tiras el dado)   REC el dado
  *   OCT-   la canción anterior    OCT+ medio tono arriba sí / no
  * Perillas: KNOB 1 rebajada, 2 reverb, 3 tempo, 4 tono; SELECT color; ALGORITHM sentimiento (de máquina a
- *   suelto); PRESETS percusión (la de la canción, nada, güiro, ligera, completa)
+ *   suelto: swing, acentos); PRESETS el bajo (el de la canción, tumbao, dub, caminado, saltado)
  * Teclado: las blancas tocan el acordeón en la escala de la canción, las negras los gritos (cumbia.c cumbia_keys).
  *
  * Pantalla 240 x 240, un solo color sobre negro (el usuario lo elige):
@@ -165,7 +165,7 @@ static const struct { uint8_t btn, pf, icon; const char *name; } CB_PUSH[CB_NPUS
     {B_EDIT, CB_CUT, SPR_FX_CORTE, "CORTE"},            /* bajo y percusión fuera; regresan en el siguiente tiempo */
     {B_ARP, PF_ETHR, SPR_FX_ECO_SONIDERO, "ECO A TODO"},   /* toda la mezcla al eco (sin subir el volumen) */
 };
-static const char *const CB_DENS_NAMES[5] = {"DE LA CANCION", "NADA", "GUIRO", "LIGERA", "COMPLETA"};
+static const char *const CB_BAJO_NAMES[5] = {"DE LA CANCION", "TUMBAO", "DUB", "CAMINADO", "SALTADO"};
 static void cb_ui_input(void)
 {
     uint32_t pressed = fm1_input_edges(0), held = fm1_in.buttons;
@@ -315,9 +315,9 @@ static void cb_ui_input(void)
         cb_say_n("SENTIMIENTO", cbc.sent, "");
     }
     if ((e = panel_enc(EN_PRESET)) != 0) {
-        int32_t v = (int32_t)cbc.dens + (e > 0 ? 1 : -1);
-        cbc.dens = (uint8_t)(v < 0 ? 0 : v > 4 ? 4 : v);
-        cb_say2("PERCUSION", CB_DENS_NAMES[cbc.dens]);
+        int32_t v = (int32_t)cbc.bajo + (e > 0 ? 1 : -1);
+        cbc.bajo = (uint8_t)(v < 0 ? 0 : v > 4 ? 4 : v);
+        cb_say2("BAJO", CB_BAJO_NAMES[cbc.bajo]);
     }
     if ((e = panel_enc(EN_SELECT)) != 0) {
         cbu.color = (uint8_t)(((int32_t)cbu.color + (e > 0 ? 1 : 7)) % 8);
@@ -392,8 +392,8 @@ static void cb_card(int32_t x, int32_t y, uint32_t icon, const char *val, int ho
     if (icon < SPR_N)
         cb_spr(x + 16, y + 2, icon, cbu.ramp);
     else
-        cb_text_c(x + 28, y + 6, &AF_S, "BPM", cbu.mid);
-    cb_text_c(x + 28, y + 26, &AF_S, val, cbu.fg);
+        cb_text_c(x + 28, y + 6, &AF_S, "BPM", cbu.fg);   /* (del color de los íconos) */
+    cb_text_c(x + 28, y + 26, &AF_S, val, 0xFFFF);        /* los valores en blanco: se leen en todos los colores */
 }
 static const char *const CB_ROLE_NAME[4] = {"INTRO", "ACORDEON", "PARA LA VOZ", "FINAL"};
 static void cb_draw_head(void)
@@ -429,8 +429,8 @@ static void cb_draw_head(void)
                 b[0] = 'S', b[1] = 0;
             cv_rrect(x, 28, 57, 44, 6, cb_rgb(CB_COLORS[cbu.color & 7u], 2), 0);   /* (como las otras tarjetas) */
             (void)IC;
-            cb_text_c(x + 28, 31, &AF_S, LB[i], cbu.mid);
-            cb_text_c(x + 28, 49, &AF_M, b, cbu.fg);
+            cb_text_c(x + 28, 31, &AF_S, LB[i], cbu.fg);
+            cb_text_c(x + 28, 49, &AF_M, b, 0xFFFF);
         }
         cv_blit(0, 0);
         return;

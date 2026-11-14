@@ -44,6 +44,8 @@ int main(int argc, char **argv)
     if (getenv("REB")) cbc.reb = (uint8_t)atoi(getenv("REB"));
     if (getenv("BB")) cbc.bb = 1;
     if (getenv("KEY")) cbc.key = (uint8_t)atoi(getenv("KEY"));
+    if (getenv("SENT")) cbc.sent = (uint8_t)atoi(getenv("SENT"));
+    if (getenv("BAJO")) cbc.bajo = (uint8_t)atoi(getenv("BAJO"));
     cb_tn = CB_KEYS[cbc.key] - 3;
     cb_levels();
     {                                         /* como al encender: el audio corre antes de que haya canción */
