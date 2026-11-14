@@ -21,9 +21,9 @@ import sampleio as sio  # noqa: E402
 GRITOS = [("wepa_C", 0), ("cumbia_C", 0), ("opa_C", 0), ("abailar_C", 0), ("mty_C", 0), ("escuchen", 0), ("ave", 0)]
 GRITOS2 = [("weweaa", 0), ("pagozar", 0), ("estumusica", 0), ("ohohoh", 0)]
 # USR2 y USR3 (en una sola no caben): cumbia.c CB_GRITO dice qué tecla negra toca cuál
-LOUD = {"wepa_C": -1.8, "cumbia_C": 2.7, "opa_C": 7.2, "abailar_C": 5.1, "mty_C": 2.0, "weweaa": -7.6, "pagozar": -7.0, "ave": 5.5, "escuchen": -1.9, "estumusica": -6.0, "ohohoh": -4.2}   # dB: medido a través del FM-1 simulado (cumbia_sim, pyloudnorm) para que suenen
+LOUD = {"wepa_C": 0.0, "cumbia_C": 2.7, "opa_C": 7.2, "abailar_C": 5.1, "mty_C": 2.0, "weweaa": -3.6, "pagozar": -3.0, "ave": 2.5, "escuchen": -1.9, "estumusica": -6.0, "ohohoh": -0.2}   # dB: medido a través del FM-1 simulado (cumbia_sim, pyloudnorm) para que suenen
 # parejos, más lo pedido al oído: cumbia +1 dB, las teclas 6, 7 y 8 -1 dB; después, en el FM-1 con la canción:
-# opa, a bailar, Monterrey y ave -1.5 dB, wewea +2 dB. Lo que sigue:
+# opa, a bailar, Monterrey y ave -1.5 dB, wewea +2 dB; luego wepa +1.8, wewea, pagozar y oh oh oh +4, ave -3. Lo que sigue:
 # las teclas 6, 7 y 8 un poco abajo
 TARGET = -17.0                           # LUFS (sonoridad percibida, pyloudnorm), igual para todos
 

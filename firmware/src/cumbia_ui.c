@@ -392,7 +392,10 @@ static void cb_card(int32_t x, int32_t y, uint32_t icon, const char *val, int ho
     if (icon < SPR_N)
         cb_spr(x + 16, y + 2, icon, cbu.ramp);
     else
-        cb_text_c(x + 28, y + 6, &AF_S, "BPM", cbu.fg);   /* (del color de los íconos) */
+    {                                    /* "BPM" con el peso de los íconos: más grande y en negrita (dos pasadas) */
+        cb_text_c(x + 28, y + 4, &AF_M, "BPM", cbu.fg);
+        cb_text_c(x + 29, y + 4, &AF_M, "BPM", cbu.fg);
+    }
     cb_text_c(x + 28, y + 26, &AF_S, val, 0xFFFF);        /* los valores en blanco: se leen en todos los colores */
 }
 static const char *const CB_ROLE_NAME[4] = {"INTRO", "ACORDEON", "PARA LA VOZ", "FINAL"};
