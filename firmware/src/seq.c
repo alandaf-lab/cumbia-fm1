@@ -892,6 +892,8 @@ static __attribute__((noinline)) void kt_block(void)
 }
 
 /* -------------------------------------------------------- sequencer --- */
+static void cumbia_start(void);                   /* cumbia.c: la canción generada */
+static void cumbia_stop(void);
 static void seq_start(void)
 {
     uint32_t i;
@@ -916,6 +918,7 @@ static void seq_start(void)
     song.playing = 1;
     slicer_start();                                /* slicer.c: its step 0 with the sequencer's */
     perf_start();                                  /* perform.c: its 1/16 grid too */
+    cumbia_start();                                /* cumbia.c: una canción nueva desde su paso 0 */
 }
 
 static void seq_release(track_t *t)
@@ -932,6 +935,7 @@ static void seq_stop(void)
 {
     uint32_t i;
     song.playing = 0;
+    cumbia_stop();
     cin_left = 0;                                  /* (a count-in: cancelled, nothing recorded) */
     cin_flush = 0;
     memset(cin_n, 0, sizeof cin_n);
@@ -1371,6 +1375,8 @@ static int32_t click_beat_now(void)
 }
 
 /* everything that happens between two rendered blocks */
+#include "cumbia.c"                              /* la canción generada (después de midi_clock.c y fx.c) */
+
 static void events_block(uint32_t n)
 {
     uint32_t i, pr, seq_n = n;
@@ -1482,6 +1488,7 @@ static void events_block(uint32_t n)
     chain_tick(clock_mode && chain.running ? midi_seq_preview(&trk[chain.clk], seq_n) : seq_n);
     for (i = 0; i < NTRK; i++)
         seq_tick(&trk[i], seq_n);
+    cumbia_tick(seq_n);
     if (cin_flush)
         cin_record();
     if (song.playing)
