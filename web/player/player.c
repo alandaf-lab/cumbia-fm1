@@ -40,6 +40,16 @@ EX(p_button) void p_button(uint32_t label, uint32_t down)
     } else
         fm1_in.buttons &= ~b;
 }
+EX(p_buttons) void p_buttons(uint32_t mask)   /* los 14 botones a la vez (bit = panel.c B_*) */
+{
+    uint32_t i, m = 0;
+    for (i = 0; i < NB; i++)
+        if ((mask >> i) & 1u)
+            m |= 1u << panel.btn[i];
+    host_pressed |= m & ~fm1_in.buttons;
+    fm1_in.buttons = m;
+}
+EX(p_keys_mask) void p_keys_mask(uint32_t mask) { p_keys = mask & 0x7FFFFFFu; }
 EX(p_knob) void p_knob(uint32_t en, int32_t d) { host_enc[panel.enc[en]] += d; }
 EX(p_key) void p_key(uint32_t k, uint32_t down)
 {

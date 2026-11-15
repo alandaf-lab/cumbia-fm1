@@ -86,7 +86,9 @@ def main(pkg, version, out):
         play.mkdir(parents=True, exist_ok=True)
         (play / "index.html").write_text(              # (?v=: GitHub Pages guarda los archivos 10 minutos)
             (HERE / "player" / "index.html").read_text(encoding="utf-8").replace("__V__", version), encoding="utf-8")
-        shutil.copy(HERE / "player" / "worklet.js", play / "worklet.js")
+        for f in ("worklet.js", "panel.js"):
+            shutil.copy(HERE / "player" / f, play / f)
+        shutil.copytree(HERE / "player" / "fonts", play / "fonts", dirs_exist_ok=True)
         for f in ("kit_perc.js", "gritos.js"):
             shutil.copy(HERE / f, play / f)
         shutil.copy(wasm, play / "cumbia.wasm")

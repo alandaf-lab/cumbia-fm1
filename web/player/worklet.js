@@ -28,7 +28,9 @@ class CumbiaProcessor extends AudioWorkletProcessor {
       this.e = e;
       this.port.postMessage({ t: 'ready' });
     } else if (this.e) {
-      if (d.t === 'btn') this.e.p_button(d.l, d.d ? 1 : 0);
+      if (d.t === 'buttons') this.e.p_buttons(d.mask >>> 0);
+      else if (d.t === 'keys') this.e.p_keys_mask(d.mask >>> 0);
+      else if (d.t === 'btn') this.e.p_button(d.l, d.d ? 1 : 0);
       else if (d.t === 'knob') this.e.p_knob(d.e, d.d);
       else if (d.t === 'key') this.e.p_key(d.k, d.d ? 1 : 0);
     }

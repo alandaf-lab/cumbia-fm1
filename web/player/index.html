@@ -1,83 +1,62 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-only
+     CUMBIA en el navegador. El panel del FM-1 (panel.js) y la forma de esta página vienen de Skiff (illuminus5,
+     web/emu), que a su vez sigue la página de X0X (charlesvestal/fm1-x0x); los dos GPL-3.0 y hechos sobre Felucca. -->
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CUMBIA · Tócalo aquí</title>
-<meta name="description" content="El firmware de cumbia del M-VAVE FM-1, corriendo en tu navegador.">
+<meta name="description" content="El firmware de cumbia del M-VAVE FM-1, corriendo en tu navegador: el mismo código que corre en el aparato.">
 <style>
-  :root { --ink: #fff; --dim: #8a8a8a; --line: #2a2a2a; --bg: #000; --panel: #0d0d0d; }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { background: var(--bg); color: var(--ink); }
-  body { margin: 0; font: 16px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  html[lang="es"] [lang="en"], html[lang="en"] [lang="es"] { display: none !important; }
-  a { color: var(--ink); }
-  header.top { border-bottom: 1px solid var(--line); }
-  header.top .wrap { display: flex; align-items: center; gap: 18px; height: 58px; }
-  header.top img { height: 34px; width: auto; display: block; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
-  .grow { flex: 1; }
-  .pill { border: 1px solid var(--ink); background: none; color: var(--ink); font: inherit; font-size: 14px; padding: 4px 12px; border-radius: 999px; cursor: pointer; text-decoration: none; }
-  .pill.solid { background: var(--ink); color: #000; font-weight: 700; }
-  h1 { font-size: clamp(26px, 4vw, 38px); margin: 28px 0 6px; letter-spacing: -.01em; }
-  .sub { color: var(--dim); margin: 0 0 22px; }
+@font-face { font-family: "DotGothic16"; src: url("fonts/DotGothic16-subset.woff") format("woff"); font-display: swap; }
+:root { --ink: #fff; --dim: #8a8a8a; --line: #2a2a2a;
+        --body: #1d1d1f; --tray: #141415; --part: #2a2a2d; --edge: #3a3a3e; --label: #d6d6d8; --lit: #fff4d6; }
+html, body { background: #000; color: var(--ink); }
+body { margin: 0; font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+html[lang="es"] [lang="en"], html[lang="en"] [lang="es"] { display: none !important; }
+a { color: var(--ink); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+header.top { border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; align-items: center; gap: 14px; height: 58px; }
+header.top img { height: 34px; width: auto; display: block; }
+.grow { flex: 1; }
+.pill { border: 1px solid var(--ink); background: none; color: var(--ink); font: inherit; font-size: 14px; padding: 4px 12px; border-radius: 999px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.pill.solid { background: var(--ink); color: #000; font-weight: 700; }
+h1 { font-size: clamp(26px, 4vw, 38px); margin: 26px 0 4px; letter-spacing: -.01em; }
+.sub { color: var(--dim); margin: 0 0 18px; }
 
-  .device { background: var(--panel); border: 1px solid var(--line); border-radius: 28px; padding: 22px; user-select: none; -webkit-user-select: none; }
-  .upper { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
-  .screen { width: 480px; height: 480px; border-radius: 18px; border: 12px solid #1a1a1a; background: #000; display: block; image-rendering: pixelated; }
-  .knobs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 10px; }
-  .knobs.small { grid-template-columns: repeat(3, 1fr); margin-top: 22px; }
-  .knob { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: ns-resize; touch-action: none; }
-  .knob .dial { width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--ink); position: relative; }
-  .knobs.small .dial { width: 52px; height: 52px; }
-  .knob .dial::after { content: ""; position: absolute; left: 50%; top: 6px; width: 3px; height: 30%; margin-left: -1.5px; background: var(--ink); border-radius: 2px; }
-  .knob .dial { transform: rotate(var(--a, 0deg)); }
-  .knob b { font-size: 12px; letter-spacing: .06em; }
-  .knob span { font-size: 12px; color: var(--dim); text-align: center; line-height: 1.2; }
-  .vol { display: flex; align-items: center; gap: 10px; margin-top: 22px; font-size: 13px; color: var(--dim); }
-  .vol input { flex: 1; accent-color: #fff; }
+.device { position: relative; width: 100%; aspect-ratio: 1000 / 624; user-select: none; -webkit-user-select: none;
+          -webkit-touch-callout: none; touch-action: manipulation; }
+.device svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.device canvas { position: absolute; image-rendering: pixelated; background: #000; }
+.hit { position: absolute; touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 10px; }
+.hit.knob { cursor: ns-resize; border-radius: 50%; }
+.face { transition: fill .05s; }
+.face.key { fill: #0c0c0d; stroke: var(--edge); stroke-width: 1.5; }
+.slit { fill: #3a3a3c; transition: fill .05s; }
+.held .face { stroke: var(--lit); stroke-width: 3; }
+.held .face.btn { fill: var(--lit); }
+.held text { fill: #1d1d1f; }
+.held .slit { fill: #ececee; }
+.latched .face { stroke: #79b8ff; stroke-width: 3; }
+.start { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px;
+         background: rgba(0, 0, 0, .78); border-radius: 4% / 6%; text-align: center; padding: 16px; }
+.start[hidden] { display: none; }
+.start img { width: min(160px, 26vw); }
+.start button { font: inherit; font-weight: 800; font-size: 18px; padding: 12px 30px; background: #fff; color: #000; border: 0; border-radius: 999px; cursor: pointer; }
+.start button:disabled { opacity: .5; cursor: progress; }
+.start p { margin: 0; max-width: 30em; color: #ddd; font-size: 14px; }
 
-  .buttons { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 24px; }
-  .btn { border: 1.5px solid var(--ink); border-radius: 12px; padding: 9px 4px 7px; text-align: center; cursor: pointer; touch-action: none; }
-  .btn b { display: block; font-size: 13px; letter-spacing: .05em; }
-  .btn span { display: block; font-size: 11px; color: var(--dim); margin-top: 2px; }
-  .btn.on, .key.on, .oct.on { background: var(--ink); color: #000; }
-  .btn.on span { color: #444; }
-
-  .lower { display: flex; gap: 10px; margin-top: 18px; align-items: stretch; }
-  .octs { display: flex; flex-direction: column; gap: 10px; }
-  .oct { border: 1.5px solid var(--ink); border-radius: 12px; width: 64px; flex: 1; display: grid; place-items: center; text-align: center; cursor: pointer; font-size: 12px; touch-action: none; }
-  .oct span { display: block; color: var(--dim); font-size: 10px; }
-  .oct.on span { color: #444; }
-  .kbd { position: relative; flex: 1; height: 150px; overflow-x: auto; }
-  .kbd .inner { position: relative; height: 100%; min-width: 620px; }
-  .key { position: absolute; top: 0; border: 1.5px solid var(--ink); border-radius: 0 0 8px 8px; cursor: pointer; touch-action: none; display: flex; align-items: flex-end; justify-content: center; font-size: 10px; color: var(--dim); padding-bottom: 6px; }
-  .key.w { height: 100%; background: #000; }
-  .key.b { height: 58%; background: #fff; color: #000; z-index: 2; border-color: #fff; font-weight: 700; }
-  .key.b.on { background: #777; }
-  .key.w.on { color: #000; }
-
-  .start { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: grid; place-items: center; z-index: 10; text-align: center; padding: 24px; }
-  .start img { width: 220px; margin: 0 auto 18px; display: block; }
-  .start button { font: inherit; font-weight: 800; font-size: 18px; background: #fff; color: #000; border: 0; border-radius: 999px; padding: 14px 30px; cursor: pointer; }
-  .start p { color: var(--dim); max-width: 420px; margin: 16px auto 0; }
-  .help { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 34px 0 10px; color: var(--dim); font-size: 14px; }
-  .help b { color: var(--ink); }
-  footer { color: var(--dim); font-size: 14px; padding: 30px 0 60px; border-top: 1px solid var(--line); margin-top: 30px; }
-  @media (max-width: 920px) {
-    .upper { grid-template-columns: 1fr; justify-items: center; }
-    .screen { width: min(100%, 420px); height: auto; aspect-ratio: 1; }
-    .side { width: 100%; }
-    .knobs { grid-template-columns: repeat(4, 1fr); }
-    .knob .dial { width: 58px; height: 58px; }
-    .help { grid-template-columns: 1fr; }
-    .device { padding: 14px; border-radius: 20px; }
-    .buttons { gap: 6px; }
-    .btn b { font-size: 12px; }
-    .kbd .inner { min-width: 0; }
-    .kbd { height: 130px; }
-    .oct { width: 50px; }
-  }
+.legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin: 30px 0 10px; font-size: 14px; color: var(--dim); }
+.legend h3 { color: var(--ink); font-size: 15px; margin: 0 0 8px; }
+.legend table { border-collapse: collapse; width: 100%; }
+.legend td { padding: 4px 6px 4px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.legend td:first-child { color: var(--ink); font-weight: 700; white-space: nowrap; width: 84px; }
+kbd { font: 600 12px ui-monospace, Menlo, monospace; border: 1px solid #444; border-radius: 4px; padding: 0 4px; color: var(--ink); }
+footer { color: var(--dim); font-size: 13px; padding: 26px 0 50px; border-top: 1px solid var(--line); margin-top: 26px; }
+@media (orientation: portrait) and (max-width: 700px) { .wrap { padding: 0 8px; } }
+@media (max-width: 820px) { .legend { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -90,185 +69,231 @@
 
 <main class="wrap">
   <h1><span lang="es">Tócalo aquí</span><span lang="en">Play it here</span></h1>
-  <p class="sub"><span lang="es">Es el mismo programa que corre en el FM-1, con los mismos sonidos. Usa el mouse, el dedo o el teclado de la computadora.</span><span lang="en">The same program that runs on the FM-1, with the same sounds. Use the mouse, your finger or the computer keyboard.</span></p>
+  <p class="sub"><span lang="es">Es el mismo programa que corre en el FM-1, con los mismos sonidos. Toca con el mouse, el dedo o el teclado de la computadora.</span><span lang="en">The same program that runs on the FM-1, with the same sounds. Play with the mouse, your finger or the computer keyboard.</span></p>
 
-  <div class="device">
-    <div class="upper">
-      <canvas class="screen" id="screen" width="240" height="240"></canvas>
-      <div class="side">
-        <div class="knobs" id="knobsBig"></div>
-        <div class="knobs small" id="knobsSmall"></div>
-        <label class="vol"><span lang="es">Volumen</span><span lang="en">Volume</span><input type="range" id="vol" min="0" max="100" value="80"></label>
-      </div>
-    </div>
-    <div class="buttons" id="buttons"></div>
-    <div class="lower">
-      <div class="octs" id="octs"></div>
-      <div class="kbd"><div class="inner" id="kbd"></div></div>
+  <div class="device" id="device">
+    <svg id="panel" viewBox="0 0 1000 624" aria-hidden="true"></svg>
+    <canvas id="screen" width="240" height="240" role="img" aria-label="Pantalla"></canvas>
+    <div class="start" id="start">
+      <img src="../img/bailarin.gif" alt="">
+      <button id="go" type="button"><span lang="es">Prender</span><span lang="en">Power on</span></button>
+      <p id="status"><span lang="es">Sube el volumen. Se escucha mejor con audífonos o bocinas. En iPhone, quita el modo silencio.</span><span lang="en">Turn the volume up. Best with headphones or speakers. On iPhone, turn off silent mode.</span></p>
     </div>
   </div>
 
-  <div class="help">
-    <div><b lang="es">Teclado de la computadora</b><b lang="en">Computer keyboard</b><br>
-      <span lang="es">Z a / y Q a Y: el acordeón. 1 a 0 y −: los once gritos. Espacio: PLAY. Enter: el dado.</span>
-      <span lang="en">Z to / and Q to Y: the accordion. 1 to 0 and −: the eleven shouts. Space: PLAY. Enter: the die.</span></div>
-    <div><b lang="es">Perillas</b><b lang="en">Knobs</b><br>
-      <span lang="es">Arrastra hacia arriba o abajo, o usa la rueda del mouse. A la izquierda, la rebajada.</span>
-      <span lang="en">Drag up or down, or use the mouse wheel. Turn the first one left for the slowdown.</span></div>
-    <div><b lang="es">Efectos</b><b lang="en">Effects</b><br>
-      <span lang="es">Los botones de arriba suenan mientras los mantienes. HOME: toca para cambiar quién baila; mantenlo para ver qué hace cada botón.</span>
-      <span lang="en">The top buttons sound while you hold them. HOME: tap to switch dancers; hold it to see what each button does.</span></div>
+  <div class="legend">
+    <div>
+      <h3><span lang="es">Botones de arriba: mantener</span><span lang="en">Top buttons: hold</span></h3>
+      <table>
+        <tr><td>FX</td><td lang="es">Cinta para atrás</td><td lang="en">Tape rewind</td></tr>
+        <tr><td>SCL</td><td lang="es">Ahogada</td><td lang="en">Muffled</td></tr>
+        <tr><td>ENV</td><td lang="es">Freno</td><td lang="en">Brake</td></tr>
+        <tr><td>LFO</td><td lang="es">Repetición</td><td lang="en">Repeat</td></tr>
+        <tr><td>EDIT</td><td lang="es">Corte</td><td lang="en">Cut</td></tr>
+        <tr><td>GLO</td><td lang="es">La mezcla (tocar)</td><td lang="en">The mix (tap)</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3><span lang="es">Botones de abajo</span><span lang="en">Bottom buttons</span></h3>
+      <table>
+        <tr><td>HOME</td><td lang="es">Tocar: quién baila. Mantener: qué hace cada botón</td><td lang="en">Tap: switch dancers. Hold: what each button does</td></tr>
+        <tr><td>SAVE</td><td lang="es">Eco en los gritos</td><td lang="en">Echo on the shouts</td></tr>
+        <tr><td>ARP</td><td lang="es">Eco a todo (mantener)</td><td lang="en">Echo on everything (hold)</td></tr>
+        <tr><td>SEQ</td><td lang="es">Boom bap</td><td lang="en">Boom bap</td></tr>
+        <tr><td>PLAY</td><td lang="es">Toca o para</td><td lang="en">Play or stop</td></tr>
+        <tr><td>REC</td><td lang="es">El dado: canción nueva</td><td lang="en">The die: a new song</td></tr>
+        <tr><td>OCT− / +</td><td lang="es">La anterior / medio tono arriba</td><td lang="en">Previous song / up a half step</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3><span lang="es">Perillas y teclas</span><span lang="en">Knobs and keys</span></h3>
+      <table>
+        <tr><td>KNOB 1–4</td><td lang="es">Rebajada, reverb, tempo, tono</td><td lang="en">Slowdown, reverb, tempo, key</td></tr>
+        <tr><td>ALGORITHM</td><td lang="es">Sentimiento</td><td lang="en">Feel</td></tr>
+        <tr><td>PRESETS</td><td lang="es">El bajo</td><td lang="en">The bass</td></tr>
+        <tr><td>SELECT</td><td lang="es">Color de pantalla</td><td lang="en">Screen color</td></tr>
+        <tr><td>MASTER</td><td lang="es">Volumen</td><td lang="en">Volume</td></tr>
+        <tr><td><span lang="es">Teclas</span><span lang="en">Keys</span></td><td><span lang="es">Abajo el acordeón, arriba los 11 gritos</span><span lang="en">Bottom row: accordion. Top row: the 11 shouts</span></td></tr>
+        <tr><td><span lang="es">Teclado</span><span lang="en">Keyboard</span></td><td><kbd>Z</kbd>…<kbd>/</kbd> <kbd>Q</kbd>…<kbd>Y</kbd> <span lang="es">acordeón</span><span lang="en">accordion</span> · <kbd>1</kbd>…<kbd>−</kbd> <span lang="es">gritos</span><span lang="en">shouts</span> · <kbd>␣</kbd> PLAY · <kbd>⏎</kbd> REC</td></tr>
+      </table>
+    </div>
   </div>
+
   <footer>
-    <p lang="es">CUMBIA, homenaje a Celso Piña, a Sonido Dueñez, a los cholombianos de Monterrey y a toda la gente que ha hecho este movimiento. Alan Daf. Hecho sobre <a href="https://github.com/hugelton/Felucca">Felucca</a> de Leo Kuroshita (GPL-3.0) · <a href="https://github.com/alandaf-lab/cumbia-fm1">código</a></p>
-    <p lang="en">CUMBIA, a tribute to Celso Piña, Sonido Dueñez, Monterrey's cholombianos and everyone who has made this movement. Alan Daf. Built on <a href="https://github.com/hugelton/Felucca">Felucca</a> by Leo Kuroshita (GPL-3.0) · <a href="https://github.com/alandaf-lab/cumbia-fm1">source</a></p>
+    <p lang="es">CUMBIA, homenaje a Celso Piña, a Sonido Dueñez, a los cholombianos de Monterrey y a toda la gente que ha hecho este movimiento. Alan Daf. Hecho sobre <a href="https://github.com/hugelton/Felucca">Felucca</a> de Leo Kuroshita (GPL-3.0). El panel del FM-1 en el navegador viene de <a href="https://github.com/illuminus5/skiff">Skiff</a> (illuminus5), que sigue a <a href="https://github.com/charlesvestal/fm1-x0x">X0X</a> (charlesvestal). Letra DotGothic16, <a href="fonts/OFL.txt">SIL OFL 1.1</a>. <a href="https://github.com/alandaf-lab/cumbia-fm1">Código</a>. M-VAVE y FM-1 son marcas de sus dueños.</p>
+    <p lang="en">CUMBIA, a tribute to Celso Piña, Sonido Dueñez, Monterrey's cholombianos and everyone who has made this movement. Alan Daf. Built on <a href="https://github.com/hugelton/Felucca">Felucca</a> by Leo Kuroshita (GPL-3.0). The FM-1 panel in the browser comes from <a href="https://github.com/illuminus5/skiff">Skiff</a> (illuminus5), after <a href="https://github.com/charlesvestal/fm1-x0x">X0X</a> (charlesvestal). DotGothic16 font, <a href="fonts/OFL.txt">SIL OFL 1.1</a>. <a href="https://github.com/alandaf-lab/cumbia-fm1">Source</a>. M-VAVE and FM-1 are trademarks of their owners.</p>
   </footer>
 </main>
 
-<div class="start" id="start"><div>
-  <img src="../img/bailarin.gif" alt="">
-  <button id="go" type="button"><span lang="es">Prender</span><span lang="en">Power on</span></button>
-  <p id="note"><span lang="es">Sube el volumen. Se escucha mejor con audífonos o bocinas.</span><span lang="en">Turn the volume up. Best with headphones or speakers.</span></p>
-</div></div>
-
+<script src="panel.js?v=__V__"></script>
 <script src="kit_perc.js?v=__V__"></script>
 <script src="gritos.js?v=__V__"></script>
 <script>
 (function () {
-  // idioma, como en la página
-  var root = document.documentElement, lb = document.getElementById('lang'), saved = null;
-  try { saved = localStorage.getItem('cumbia-lang'); } catch (e) {}
-  function setLang(l) { root.lang = l; lb.textContent = l === 'es' ? 'EN' : 'ES'; try { localStorage.setItem('cumbia-lang', l); } catch (e) {} }
-  setLang(saved || ((navigator.language || 'es').slice(0, 2) === 'en' ? 'en' : 'es'));
-  lb.onclick = function () { setLang(root.lang === 'es' ? 'en' : 'es'); };
+  "use strict";
+  var root = document.documentElement, lb = document.getElementById("lang"), saved = null;
+  try { saved = localStorage.getItem("cumbia-lang"); } catch (e) {}
+  function setLang(l) { root.lang = l; lb.textContent = l === "es" ? "EN" : "ES"; try { localStorage.setItem("cumbia-lang", l); } catch (e) {} }
+  setLang(saved || ((navigator.language || "es").slice(0, 2) === "en" ? "en" : "es"));
+  lb.onclick = function () { setLang(root.lang === "es" ? "en" : "es"); };
 
-  // los botones del FM-1 (panel.c: B_FX .. B_OCTUP) y sus perillas (EN_SELECT .. EN_K4)
-  var B = { FX: 0, SCL: 1, ENV: 2, LFO: 3, EDIT: 4, GLO: 5, HOME: 6, SAVE: 7, ARP: 8, SEQ: 9, PLAY: 10, REC: 11, OCTDN: 12, OCTUP: 13 };
-  var TOP = [['FX', 'CINTA', 'TAPE'], ['SCL', 'AHOGADA', 'MUFFLE'], ['ENV', 'FRENO', 'BRAKE'], ['LFO', 'REPITE', 'REPEAT'], ['EDIT', 'CORTE', 'CUT'], ['GLO', 'MEZCLA', 'MIX']];
-  var BOT = [['HOME', 'BAILE · MAPA', 'DANCER · MAP'], ['SAVE', 'ECO', 'ECHO'], ['ARP', 'ECO A TODO', 'ECHO ALL'], ['SEQ', 'BOOM BAP', 'BOOM BAP'], ['PLAY', 'TOCA', 'PLAY'], ['REC', 'DADO', 'DIE']];
-  var KB = [[3, 'KNOB 1', 'REBAJADA', 'SLOWDOWN'], [4, 'KNOB 2', 'REVERB', 'REVERB'], [5, 'KNOB 3', 'TEMPO', 'TEMPO'], [6, 'KNOB 4', 'TONO', 'KEY']];
-  var KS = [[0, 'SELECT', 'COLOR', 'COLOR'], [1, 'ALGORITHM', 'SENTIMIENTO', 'FEEL'], [2, 'PRESETS', 'BAJO', 'BASS']];
-  var GR = ['¡Wepa!', '¡Cumbia!', '¡Opa!', '¡A bailar!', '¡Desde Monterrey!', '¡Weweaa!', '¡Pa gozar!', '¡Ave!', '¡Escuchen esto!', '¡Es tu música!', '¡Oh oh oh!'];
-  var node = null, ctx = null, gain = null;
+  var P = window.PANEL, B = P.B, WHITE = P.WHITE, BLACK = P.BLACK;
+  var svg = document.getElementById("panel"), device = document.getElementById("device"), canvas = document.getElementById("screen");
+  var DOT = "'DotGothic16', -apple-system, 'Helvetica Neue', Arial, sans-serif";
+  var node = null, ac = null, gain = null, btnMask = 0, keyMask = 0, latched = 0, master = 0.8, layout = null;
+  var angle = {}; P.KNOBS.forEach(function (n) { angle[n] = 0; }); angle.MASTER = -135 + 270 * master;
+  var knobs = [], buttons = [], keys = [], btnBy = new Map(), keyBy = new Map();
   function send(m) { if (node) node.port.postMessage(m); }
-  function el(t, c, h) { var e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; }
-  function lbl(es, en) { return '<span lang="es">' + es + '</span><span lang="en">' + en + '</span>'; }
 
-  function hold(e, down, up) {         // presionar y soltar, con mouse o dedo (también si el dedo se sale)
-    e.addEventListener('pointerdown', function (ev) { ev.preventDefault(); e.setPointerCapture(ev.pointerId); e.classList.add('on'); down(); });
-    var rel = function () { if (e.classList.contains('on')) { e.classList.remove('on'); up(); } };
-    e.addEventListener('pointerup', rel); e.addEventListener('pointercancel', rel); e.addEventListener('lostpointercapture', rel);
-  }
-  var btnEl = {};
-  function button(parent, d, cls) {
-    var e = el('div', cls || 'btn', '<b>' + d[0] + '</b><span>' + lbl(d[1], d[2]) + '</span>');
-    var l = B[d[0]];
-    hold(e, function () { send({ t: 'btn', l: l, d: 1 }); }, function () { send({ t: 'btn', l: l, d: 0 }); });
-    btnEl[d[0]] = e; parent.appendChild(e);
-  }
-  var bb = document.getElementById('buttons');
-  TOP.forEach(function (d) { button(bb, d); });
-  BOT.forEach(function (d) { button(bb, d); });
-  var oc = document.getElementById('octs');
-  [['OCTUP', 'OCT+', '½ TONO', '½ STEP'], ['OCTDN', 'OCT−', 'ANTERIOR', 'PREVIOUS']].forEach(function (d) {
-    var e = el('div', 'oct', '<div><b>' + d[1] + '</b><span>' + lbl(d[2], d[3]) + '</span></div>');
-    var l = B[d[0]];
-    hold(e, function () { send({ t: 'btn', l: l, d: 1 }); }, function () { send({ t: 'btn', l: l, d: 0 }); });
-    btnEl[d[0]] = e; oc.appendChild(e);
-  });
-
-  function knob(parent, d) {
-    var e = el('div', 'knob', '<div class="dial"></div><b>' + d[1] + '</b><span>' + lbl(d[2], d[3]) + '</span>');
-    var dial = e.firstChild, ang = 0, y0 = null, acc = 0;
-    function turn(n) { if (!n) return; ang += n * 12; dial.style.setProperty('--a', ang + 'deg'); send({ t: 'knob', e: d[0], d: n }); }
-    e.addEventListener('pointerdown', function (ev) { ev.preventDefault(); e.setPointerCapture(ev.pointerId); y0 = ev.clientY; acc = 0; });
-    e.addEventListener('pointermove', function (ev) {
-      if (y0 == null) return;
-      acc += (y0 - ev.clientY); y0 = ev.clientY;
-      var n = Math.trunc(acc / 6); acc -= n * 6; turn(n);
-    });
-    var end = function () { y0 = null; };
-    e.addEventListener('pointerup', end); e.addEventListener('pointercancel', end);
-    e.addEventListener('wheel', function (ev) { ev.preventDefault(); turn(ev.deltaY < 0 ? 1 : -1); }, { passive: false });
-    parent.appendChild(e);
-  }
-  KB.forEach(function (d) { knob(document.getElementById('knobsBig'), d); });
-  KS.forEach(function (d) { knob(document.getElementById('knobsSmall'), d); });
-
-  // el teclado: 27 teclas desde FA, 16 blancas (el acordeón) y 11 negras (los gritos)
-  var BLACK = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25], keyEl = {};
-  var kb = document.getElementById('kbd'), wi = 0, gi = 0;
-  for (var k = 0; k < 27; k++) {
-    var isB = BLACK.indexOf(k) >= 0, e;
-    if (isB) {
-      e = el('div', 'key b', String(gi + 1)); e.title = GR[gi]; gi++;
-      e.style.left = 'calc(' + (wi / 16 * 100) + '% - ' + (100 / 16 * 0.32) + '%)'; e.style.width = (100 / 16 * 0.64) + '%';
-    } else {
-      e = el('div', 'key w'); e.style.left = (wi / 16 * 100) + '%'; e.style.width = (100 / 16) + '%'; wi++;
+  function build(name) {
+    layout = name;
+    device.querySelectorAll(".hit").forEach(function (d) { d.remove(); });
+    var R = P.draw(svg, name, { knobFont: DOT }), L = R.L;
+    device.style.aspectRatio = L.w + " / " + L.h;
+    var s = R.screen;
+    Object.assign(canvas.style, { left: s[0] / L.w * 100 + "%", top: s[1] / L.h * 100 + "%", width: s[2] / L.w * 100 + "%", height: s[2] / L.h * 100 + "%" });
+    knobs = R.knobs; buttons = R.buttons; keys = R.keys;
+    function hit(c, cls) {
+      var b = c.g.getBBox(), d = document.createElement("div");
+      d.className = "hit" + (cls ? " " + cls : "");
+      Object.assign(d.style, { left: b.x / L.w * 100 + "%", top: b.y / L.h * 100 + "%", width: b.width / L.w * 100 + "%", height: b.height / L.h * 100 + "%" });
+      d.title = c.name;
+      d.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
+      d.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+      device.insertBefore(d, document.getElementById("start"));
+      c.hit = d;
     }
-    (function (k, e) {
-      hold(e, function () { send({ t: 'key', k: k, d: 1 }); }, function () { send({ t: 'key', k: k, d: 0 }); });
-    })(k, e);
-    keyEl[k] = e; kb.appendChild(e);
+    knobs.forEach(function (k) { hit(k, "knob"); bindKnob(k); drawKnob(k); });
+    buttons.forEach(function (b) { hit(b); bindButton(b); });
+    keys.forEach(function (k, i) { hit(k); bindKey(k, i); });
+    syncButtons(true); syncKeys(true);
   }
-  // el teclado de la computadora
-  var WHITE = []; for (k = 0; k < 27; k++) if (BLACK.indexOf(k) < 0) WHITE.push(k);
-  var MAP = {}; 'zxcvbnm,./qwerty'.split('').forEach(function (c, i) { MAP[c] = WHITE[i]; });
-  '1234567890-'.split('').forEach(function (c, i) { MAP[c] = BLACK[i]; });
-  var down = {};
-  window.addEventListener('keydown', function (ev) {
-    if (ev.repeat || ev.metaKey || ev.ctrlKey) return;
-    var c = ev.key.toLowerCase();
-    if (c === ' ' || c === 'enter') { ev.preventDefault(); var n = c === ' ' ? 'PLAY' : 'REC'; send({ t: 'btn', l: B[n], d: 1 }); btnEl[n].classList.add('on'); down[c] = n; return; }
-    if (MAP[c] != null) { send({ t: 'key', k: MAP[c], d: 1 }); keyEl[MAP[c]].classList.add('on'); down[c] = 1; }
+  function syncButtons(redraw) {
+    var m = latched; btnBy.forEach(function (b) { m |= 1 << b; });
+    if (m !== btnMask) { btnMask = m; send({ t: "buttons", mask: m }); } else if (!redraw) return;
+    buttons.forEach(function (b) { b.g.classList.toggle("held", !!(m & (1 << b.bit))); b.g.classList.toggle("latched", !!(latched & (1 << b.bit))); });
+  }
+  function syncKeys(redraw) {
+    var m = 0; keyBy.forEach(function (k) { m |= 1 << k; });
+    if (m !== keyMask) { keyMask = m; send({ t: "keys", mask: m }); } else if (!redraw) return;
+    keys.forEach(function (k, i) { k.g.classList.toggle("held", !!(m & (1 << i))); });
+  }
+  function bindButton(b) {
+    b.hit.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      if (e.shiftKey || e.button === 2) { latched ^= 1 << b.bit; syncButtons(true); return; }   // Shift-clic: se queda presionado
+      if (latched & (1 << b.bit)) { latched &= ~(1 << b.bit); syncButtons(true); return; }
+      b.hit.setPointerCapture(e.pointerId); btnBy.set("p" + e.pointerId, b.bit); syncButtons();
+    });
+  }
+  function bindKey(k, i) {
+    k.hit.addEventListener("pointerdown", function (e) { e.preventDefault(); k.hit.setPointerCapture(e.pointerId); keyBy.set("p" + e.pointerId, i); syncKeys(); });
+  }
+  function release(e) { var id = "p" + e.pointerId; if (btnBy.delete(id)) syncButtons(); if (keyBy.delete(id)) syncKeys(); }
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (t) { device.addEventListener(t, release); });
+
+  function drawKnob(k) { if (k.ind) k.ind.setAttribute("transform", "rotate(" + angle[k.name] + " " + k.x + " " + k.y + ")"); }
+  function turn(k, n) {
+    if (!n) return;
+    if (k.role === "master") {
+      master = Math.max(0, Math.min(1, master + n * 0.03)); angle.MASTER = -135 + 270 * master;
+      if (gain) gain.gain.value = master;
+    } else { angle[k.name] = (angle[k.name] + n * 18) % 360; send({ t: "knob", e: k.role, d: n }); }
+    drawKnob(k);
+  }
+  function bindKnob(k) {
+    var drag = null, wheel = 0;
+    k.hit.addEventListener("pointerdown", function (e) { e.preventDefault(); k.hit.setPointerCapture(e.pointerId); drag = { y: e.clientY, acc: 0 }; });
+    k.hit.addEventListener("pointermove", function (e) {
+      if (!drag) return;
+      drag.acc += drag.y - e.clientY; drag.y = e.clientY;
+      var step = k.role === "master" ? 3 : 8, n = Math.trunc(drag.acc / step);
+      if (n) { drag.acc -= n * step; turn(k, n); }
+    });
+    var end = function () { drag = null; };
+    k.hit.addEventListener("pointerup", end); k.hit.addEventListener("pointercancel", end);
+    k.hit.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      var dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+      if (Math.abs(dy) >= 50) { turn(k, dy < 0 ? 1 : -1); wheel = 0; return; }
+      wheel -= dy; var n = Math.trunc(wheel / 25); if (n) { wheel -= n * 25; turn(k, n); }
+    }, { passive: false });
+  }
+  var tall = matchMedia("(orientation: portrait) and (max-width: 700px)");
+  build(tall.matches ? "tall" : "wide");
+  tall.addEventListener("change", function () { build(tall.matches ? "tall" : "wide"); });
+  if (document.fonts) document.fonts.load("16px DotGothic16").then(function () { build(layout); }, function () {});
+
+  // el teclado de la computadora: Z../ y Q..Y las blancas (el acordeón), 1..0 y − las negras (los gritos)
+  var KEYMAP = {};
+  ["KeyZ", "KeyX", "KeyC", "KeyV", "KeyB", "KeyN", "KeyM", "Comma", "Period", "Slash", "KeyQ", "KeyW", "KeyE", "KeyR", "KeyT", "KeyY"]
+    .forEach(function (c, i) { KEYMAP[c] = { key: WHITE[i] }; });
+  ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9", "Digit0", "Minus"]
+    .forEach(function (c, i) { KEYMAP[c] = { key: BLACK[i] }; });
+  KEYMAP.Space = { btn: B.PLAY }; KEYMAP.Enter = { btn: B.REC };
+  addEventListener("keydown", function (e) {
+    if (!node || e.metaKey || e.ctrlKey || e.altKey) return;
+    var m = KEYMAP[e.code]; if (!m) return;
+    e.preventDefault(); if (e.repeat) return;
+    if (m.key !== undefined) { keyBy.set("k" + e.code, m.key); syncKeys(); } else { btnBy.set("k" + e.code, m.btn); syncButtons(); }
   });
-  window.addEventListener('keyup', function (ev) {
-    var c = ev.key.toLowerCase();
-    if (!down[c]) return;
-    if (typeof down[c] === 'string') { send({ t: 'btn', l: B[down[c]], d: 0 }); btnEl[down[c]].classList.remove('on'); }
-    else { send({ t: 'key', k: MAP[c], d: 0 }); keyEl[MAP[c]].classList.remove('on'); }
-    delete down[c];
+  addEventListener("keyup", function (e) { var id = "k" + e.code; if (keyBy.delete(id)) syncKeys(); if (btnBy.delete(id)) syncButtons(); });
+  addEventListener("blur", function () {
+    Array.from(btnBy.keys()).forEach(function (id) { if (id[0] !== "p") btnBy.delete(id); });
+    Array.from(keyBy.keys()).forEach(function (id) { if (id[0] !== "p") keyBy.delete(id); });
+    syncButtons(); syncKeys();
   });
 
-  // la pantalla: RGB565 (con los bytes volteados, como el LCD) a RGBA
-  var cv = document.getElementById('screen'), g = cv.getContext('2d'), img = g.createImageData(240, 240);
-  function draw(s) {
-    var p = img.data;
+  // la pantalla: RGB565 con los bytes volteados (como el LCD) a RGBA
+  var g = canvas.getContext("2d"), img = g.createImageData(240, 240);
+  function draw(fb) {
+    var d = img.data;
     for (var i = 0; i < 57600; i++) {
-      var c = ((s[i] >> 8) | (s[i] << 8)) & 0xFFFF;
-      p[4 * i] = (c >> 11) << 3; p[4 * i + 1] = ((c >> 5) & 63) << 2; p[4 * i + 2] = (c & 31) << 3; p[4 * i + 3] = 255;
+      var p = ((fb[i] >> 8) | (fb[i] << 8)) & 0xFFFF;
+      d[4 * i] = ((p >> 11) & 31) * 255 / 31; d[4 * i + 1] = ((p >> 5) & 63) * 255 / 63; d[4 * i + 2] = (p & 31) * 255 / 31; d[4 * i + 3] = 255;
     }
     g.putImageData(img, 0, 0);
   }
-  g.fillStyle = '#000'; g.fillRect(0, 0, 240, 240);
 
   function b64(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
-  document.getElementById('vol').oninput = function () { if (gain) gain.gain.value = this.value / 100; };
-  document.getElementById('go').onclick = async function () {
-    var note = document.getElementById('note');
+  var status = document.getElementById("status");
+  function fail(msg) {
+    status.textContent = (root.lang === "es" ? "No se pudo prender: " : "Could not start: ") + msg;
+    document.getElementById("go").disabled = false;
+  }
+  document.getElementById("go").addEventListener("click", function () {
     this.disabled = true;
-    try {
-      var AC = window.AudioContext || window.webkitAudioContext;
-      ctx = new AC({ sampleRate: 44100, latencyHint: 'interactive' });
-      await ctx.audioWorklet.addModule('worklet.js?v=__V__');
-      var bytes = await (await fetch('cumbia.wasm?v=__V__')).arrayBuffer();
+    var AC = window.AudioContext || window.webkitAudioContext;
+    try { ac = new AC({ sampleRate: 44100, latencyHint: "interactive" }); } catch (e) { ac = new AC(); }
+    ac.resume();                         // (dentro del clic: Safari solo deja sonar lo que empieza con un gesto)
+    Promise.all([
+      fetch("cumbia.wasm?v=__V__").then(function (r) { if (!r.ok) throw new Error("cumbia.wasm: " + r.status); return r.arrayBuffer(); }),
+      ac.audioWorklet.addModule("worklet.js?v=__V__")
+    ]).then(function (res) {
+      var bytes = res[0];
+      node = new AudioWorkletNode(ac, "cumbia", { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+      gain = ac.createGain(); gain.gain.value = master;
+      node.connect(gain); gain.connect(ac.destination);
       var slots = [KIT_PERC, GRITOS, GRITOS2].map(function (s) { return { hdr: b64(s.hdr), data: b64(s.data) }; });
-      node = new AudioWorkletNode(ctx, 'cumbia', { numberOfInputs: 0, outputChannelCount: [2] });
-      gain = ctx.createGain(); gain.gain.value = document.getElementById('vol').value / 100;
-      node.connect(gain).connect(ctx.destination);
-      node.onprocessorerror = function (e) { note.textContent = 'processor error'; };
-      node.port.onmessage = function (m) {
-        if (m.data.t === 'screen') draw(m.data.s);
-        else if (m.data.t === 'ready') document.getElementById('start').style.display = 'none';
-        else if (m.data.t === 'error') { note.textContent = (root.lang === 'es' ? 'No se pudo prender: ' : 'Could not start: ') + m.data.m; document.getElementById('go').disabled = false; }
-      };
-      node.port.postMessage({ t: 'init', bytes: bytes, slots: slots }, [bytes]);   // (un WebAssembly.Module no siempre cruza al hilo de audio: van los bytes)
-      await ctx.resume();
-    } catch (e) {
-      note.textContent = (root.lang === 'es' ? 'No se pudo prender en este navegador: ' : 'Could not start in this browser: ') + e.message;
-      this.disabled = false;
-    }
-  };
+      return new Promise(function (ok, no) {
+        node.port.onmessage = function (m) {
+          var d = m.data;
+          if (d.t === "screen") draw(d.s);
+          else if (d.t === "ready") ok();
+          else if (d.t === "error") no(new Error(d.m));
+        };
+        node.port.postMessage({ t: "init", bytes: bytes, slots: slots }, [bytes]);
+      });
+    }).then(function () {
+      return ac.resume();
+    }).then(function () {
+      document.getElementById("start").hidden = true;
+      btnMask = -1; syncButtons(true); keyMask = -1; syncKeys(true);
+      if (ac.sampleRate !== 44100) console.warn("CUMBIA: el navegador toca a " + ac.sampleRate + " Hz");
+    }).catch(function (err) { node = null; fail(err && err.message || err); });
+  });
+  // al volver a la pestaña, el audio sigue (algunos navegadores lo pausan)
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && ac && ac.state !== "running") ac.resume(); });
 })();
 </script>
 </body>
