@@ -28,7 +28,7 @@ static const struct { float t; int what; int v; } EV[] = {
     {47.1f, DOWN, B_ARP}, {47.5f, GRITO, 6}, {49.9f, UP, B_ARP},
     {50.7f, PRESS, B_SEQ},
     {51.7f, PRESS, B_OCTUP},
-    {54.1f, GRITO, 10}, {56.5f, GRITO, 3},
+    {54.1f, GRITO, 10}, {56.0f, PRESS, B_HOME}, {56.5f, GRITO, 3},
     {59.8f, PRESS, B_SEQ}, {62.0f, GRITO, 1},
 };
 int main(int argc, char **argv)

@@ -20,15 +20,18 @@ CAP=[  # inicio, fin, botón, mantener, español, inglés
  (43.3,46.8,'LFO',1,'Repetición','Repeat'),
  (46.8,50.5,'ARP',1,'Eco a todo','Echo on everything'),
  (50.5,56.0,'OCT+',0,'Medio tono arriba,\ncomo en el último tramo','Up a half step,\nlike the last stretch of the song'),
- (56.0,59.6,'',0,'Una canción distinta\ncada vez','A different song every time'),
+ (56.0,59.6,'HOME',0,'Cambia quién baila','Switch dancers'),
 ]
 logo=Image.open(f'{IMG}/logo.png').convert('L')
-dancer=[]; im=Image.open(f'{IMG}/bailarin.gif')
-for i in range(im.n_frames): im.seek(i); dancer.append((im.convert('L'),im.info['duration']))
+def load(n):
+    out=[]; im=Image.open(f'{IMG}/{n}.gif')
+    for i in range(im.n_frames): im.seek(i); out.append((im.convert('L'),im.info['duration']))
+    return out
+dancer=load('bailarin'); chola=load('cholombiana')
 DCYC=sum(d for _,d in dancer)
-def dancer_at(ms):
-    ms%=DCYC
-    for f,d in dancer:
+def dancer_at(ms,seq=None):
+    seq=seq or dancer; ms%=DCYC
+    for f,d in seq:
         if ms<d: return f
         ms-=d
 def ease(x): x=max(0,min(1,x)); return x*x*(3-2*x)
@@ -141,9 +144,10 @@ class Fmt:
                     d.multiline_text((1100,y),txt,font=f,fill=c,spacing=10); y+=d.multiline_textbbox((0,0),txt,font=f)[3]+36
             s.cache[key]=L
         L=s.cache[key].copy()
-        dh=560 if s.v else 720; dw=int(dh*384/599)
-        df=dancer_at(int((t-OUT)*1000)).resize((dw,dh),Image.LANCZOS)
-        L.paste(df,(((s.W-dw)//2,560) if s.v else (260,(s.H-dh)//2)))
+        dh=520 if s.v else 640; dw=int(dh*384/599); ms=int((t-OUT)*1000)
+        a=dancer_at(ms).resize((dw,dh),Image.LANCZOS); b=dancer_at(ms,chola).resize((dw,dh),Image.LANCZOS)
+        if s.v: y=590; L.paste(a,(s.W//2-dw+30,y)); L.paste(b,(s.W//2-30,y))
+        else: y=(s.H-dh)//2; L.paste(a,(80,y)); L.paste(b,(80+dw-40,y))
         return L
 if __name__=='__main__':
     mode=sys.argv[1]; F=Fmt(1080,1920,True) if mode=='v' else Fmt(1920,1080,False)
