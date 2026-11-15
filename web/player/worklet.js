@@ -11,9 +11,13 @@ class CumbiaProcessor extends AudioWorkletProcessor {
   }
   msg(d) {
     if (d.t === 'init') {
-      const wasi = { fd_close: () => 0, fd_fdstat_get: () => 0, fd_seek: () => 0, fd_write: () => 0 };
       const mod = new WebAssembly.Module(d.bytes);
+      // lo que pida la wasi-libc (cambia con su versión): nada de archivos aquí; fd_prestat_get dice "no hay" (EBADF)
+      const wasi = {};
+      for (const im of WebAssembly.Module.imports(mod))
+        if (im.kind === 'function') wasi[im.name] = im.name === 'fd_prestat_get' ? () => 8 : () => 0;
       const e = new WebAssembly.Instance(mod, { wasi_snapshot_preview1: wasi }).exports;
+      if (e._initialize) e._initialize();
       const base = e.p_slots(), sz = e.p_slot_size();
       d.slots.forEach((s, i) => {
         const m = new Uint8Array(e.memory.buffer);
