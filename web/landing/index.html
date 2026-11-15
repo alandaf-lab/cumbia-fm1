@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CUMBIA · firmware para el M-VAVE FM-1</title>
+<meta name="description" content="Generador de cumbia colombiana de Monterrey para el M-VAVE FM-1. Homenaje a Celso Piña, Sonido Dueñez y los cholombianos.">
+<style>
+  :root { --ink: #fff; --dim: #8a8a8a; --line: #2a2a2a; --bg: #000; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--ink); }
+  body { margin: 0; font: 17px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  html[lang="es"] [lang="en"], html[lang="en"] [lang="es"] { display: none !important; }
+  a { color: var(--ink); }
+  img { display: block; max-width: 100%; }
+  .px { image-rendering: pixelated; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  header.top { position: sticky; top: 0; z-index: 5; background: rgba(0,0,0,.92); border-bottom: 1px solid var(--line); }
+  header.top .wrap { display: flex; align-items: center; gap: 22px; height: 58px; }
+  header.top img { height: 34px; width: auto; }
+  nav { display: flex; gap: 18px; flex: 1; font-size: 15px; }
+  nav a { text-decoration: none; color: var(--dim); }
+  nav a:hover { color: var(--ink); }
+  .lang { border: 1px solid var(--ink); background: none; color: var(--ink); font: inherit; font-size: 14px; padding: 4px 12px; border-radius: 999px; cursor: pointer; }
+  section { border-bottom: 1px solid var(--line); padding: 72px 0; }
+  h1, h2, h3 { font-weight: 800; letter-spacing: -.01em; line-height: 1.1; margin: 0 0 16px; }
+  h2 { font-size: clamp(30px, 4.5vw, 46px); }
+  h3 { font-size: 20px; margin-top: 8px; }
+  .kicker { text-transform: uppercase; letter-spacing: .14em; font-size: 13px; color: var(--dim); margin-bottom: 14px; }
+  .lead { font-size: clamp(19px, 2.2vw, 23px); max-width: 680px; }
+  .hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center; padding-top: 56px; }
+  .hero .logo { width: min(460px, 100%); margin-bottom: 26px; }
+  .hero .dancers { display: flex; gap: 10px; justify-content: center; align-items: flex-end; }
+  .hero .dancers img { width: 192px; }
+  .btn { display: inline-block; background: var(--ink); color: #000; font-weight: 800; text-decoration: none; padding: 14px 26px; border-radius: 999px; margin: 22px 12px 0 0; }
+  .btn.ghost { background: none; color: var(--ink); border: 1.5px solid var(--ink); }
+  .note { color: var(--dim); font-size: 15px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px; margin-top: 34px; }
+  .card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; text-align: center; }
+  .card img { width: 144px; margin: 0 auto 8px; }
+  .card span { font-size: 14px; color: var(--dim); }
+  .story { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: start; margin-top: 30px; }
+  .story p { margin: 0 0 16px; }
+  .story figure { margin: 0; }
+  figcaption { color: var(--dim); font-size: 14px; margin-top: 8px; }
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 30px 0 0; display: grid; gap: 16px; }
+  ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 54px 1fr; gap: 16px; border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  ol.steps > li::before { content: counter(s); font-weight: 800; font-size: 26px; width: 44px; height: 44px; border: 1.5px solid var(--ink); border-radius: 50%; display: grid; place-items: center; }
+  ol.steps b { display: block; font-size: 18px; margin-bottom: 4px; }
+  .split { display: grid; grid-template-columns: 1fr 260px; gap: 26px; align-items: center; }
+  .warn { border: 1.5px dashed var(--ink); border-radius: 14px; padding: 16px 18px; margin-top: 18px; }
+  .anatomy { display: grid; grid-template-columns: 480px 1fr; gap: 36px; align-items: center; margin-top: 30px; }
+  .anatomy ol { padding-left: 22px; margin: 0; }
+  .anatomy li { margin-bottom: 10px; }
+  .screen { border-radius: 22px; border: 12px solid #151515; box-shadow: 0 0 0 1px var(--line); }
+  table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+  td { border-top: 1px solid var(--line); padding: 10px 8px; vertical-align: middle; }
+  td.k { width: 92px; font-weight: 800; letter-spacing: .04em; }
+  td.i { width: 48px; }
+  td.i img { width: 36px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 22px; margin-top: 30px; }
+  .gallery figure { margin: 0; }
+  .gallery img { border-radius: 14px; border: 8px solid #151515; }
+  .gritos { columns: 2; padding-left: 22px; margin: 10px 0 0; }
+  footer { padding: 46px 0 70px; color: var(--dim); font-size: 15px; }
+  footer p { margin: 0 0 10px; }
+  @media (max-width: 860px) {
+    .hero, .story, .anatomy, .two, .split { grid-template-columns: 1fr; }
+    .hero .dancers img { width: 140px; }
+    nav { display: none; }
+    .anatomy .screen { max-width: 360px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <img src="img/logo.png" alt="CUMBIA">
+  <nav>
+    <a href="#que"><span lang="es">Qué es</span><span lang="en">What it is</span></a>
+    <a href="#historia"><span lang="es">Historia</span><span lang="en">History</span></a>
+    <a href="#instalar"><span lang="es">Instalar</span><span lang="en">Install</span></a>
+    <a href="#uso"><span lang="es">Cómo se usa</span><span lang="en">How to play</span></a>
+  </nav>
+  <button class="lang" id="lang" type="button">EN</button>
+</div></header>
+
+<section><div class="wrap hero">
+  <div>
+    <img class="logo" src="img/logo.png" alt="CUMBIA">
+    <p class="lead" lang="es">Un generador de cumbia colombiana de Monterrey para el M-VAVE FM-1. Cada vez que tiras el dado nace una canción nueva: acordeón al frente, bajo, guacharaca, congas y gritos. Y cuando quieras, la rebajas como en los bailes de la Independencia.</p>
+    <p class="lead" lang="en">A Colombian-cumbia-from-Monterrey generator for the M-VAVE FM-1. Every roll of the die makes a new song: accordion up front, bass, guacharaca, congas and shouts. And whenever you want, slow it down the way they did at the dances in Colonia Independencia.</p>
+    <a class="btn" href="webapp/installer/"><span lang="es">Instalar en tu FM-1</span><span lang="en">Install on your FM-1</span></a>
+    <a class="btn ghost" href="#uso"><span lang="es">Cómo se usa</span><span lang="en">How to play</span></a>
+    <p class="note" lang="es">Gratis y de código abierto. Desde Chrome o Edge, por USB. Siempre puedes regresar al firmware oficial.</p>
+    <p class="note" lang="en">Free and open source. From Chrome or Edge, over USB. You can always go back to the official firmware.</p>
+  </div>
+  <div class="dancers">
+    <img class="px" src="img/bailarin.gif" alt="">
+  </div>
+</div></section>
+
+<section id="que"><div class="wrap">
+  <div class="kicker"><span lang="es">Qué es</span><span lang="en">What it is</span></div>
+  <h2 lang="es">Un sonidero en la palma de la mano</h2>
+  <h2 lang="en">A sonidero in the palm of your hand</h2>
+  <p class="lead" lang="es">El FM-1 compone y toca cumbias en tiempo real, siempre en tono menor, con el acordeón al frente como manda la tradición. Tú la diriges: la rebajas, le metes gritos con eco de sonidero, la regresas en cinta, la cambias a boom bap o la cortas para levantar la pista.</p>
+  <p class="lead" lang="en">The FM-1 writes and plays cumbias in real time, always in a minor key, with the accordion up front as tradition demands. You run the show: slow it down, throw in shouts with a sonidero echo, spin the tape backwards, flip it to boom bap, or cut it to lift the floor.</p>
+  <div class="cards">
+    <div class="card"><img class="px" src="img/acordeon_tarjeta.gif" alt=""><span lang="es">Acordeón</span><span lang="en">Accordion</span></div>
+    <div class="card"><img class="px" src="img/guacharaca_tarjeta.gif" alt=""><span>Guacharaca</span></div>
+    <div class="card"><img class="px" src="img/congas_tarjeta.gif" alt=""><span>Congas</span></div>
+    <div class="card"><img class="px" src="img/timbal_tarjeta.gif" alt=""><span lang="es">Timbal y campana</span><span lang="en">Timbal and bell</span></div>
+    <div class="card"><img class="px" src="img/bajo_tarjeta.gif" alt=""><span lang="es">Bajo</span><span lang="en">Bass</span></div>
+    <div class="card"><img class="px" src="img/micro_tarjeta.gif" alt=""><span lang="es">Gritos</span><span lang="en">Shouts</span></div>
+  </div>
+  <div class="split" style="margin-top:46px">
+    <div>
+      <h3 lang="es">Y cuando entra el boom bap, entra el DJ</h3>
+      <h3 lang="en">And when the boom bap kicks in, the DJ shows up</h3>
+      <p lang="es">Un botón cambia la percusión a bombo y tarola con swing, sin soltar la cumbia. El bailarín le deja la pantalla al DJ.</p>
+      <p lang="en">One button swaps the percussion for a swung kick and snare, without letting go of the cumbia. The dancer hands the screen over to the DJ.</p>
+    </div>
+    <img class="px" src="img/dj.gif" alt="" style="width:192px">
+  </div>
+</div></section>
+
+<section id="historia"><div class="wrap">
+  <div class="kicker"><span lang="es">Historia</span><span lang="en">History</span></div>
+  <h2 lang="es">La Colombia de Monterrey</h2>
+  <h2 lang="en">Monterrey's Colombia</h2>
+  <div class="story">
+    <div>
+      <p lang="es">En las colonias populares de Monterrey, sobre todo en la Independencia, al pie del Cerro de la Campana, la cumbia y el vallenato llegaron en discos y se quedaron. Para mucha gente que había llegado del campo a trabajar en la ciudad, esas canciones de acordeón y nostalgia se volvieron propias. A Monterrey le dicen todavía "Colombia chiquita".</p>
+      <p lang="en">In Monterrey's working-class neighborhoods, above all Colonia Independencia at the foot of the Cerro de la Campana, cumbia and vallenato arrived on records and stayed. For many people who had come from the countryside to work in the city, those songs of accordion and longing became their own. Monterrey is still called "little Colombia".</p>
+      <p lang="es"><b>Los sonideros</b> llevaban la música a los bailes con sus discos y su equipo. Uno de los más queridos es <b>Gabriel Dueñez, Sonido Dueñez</b>. Cuenta la historia que una noche su equipo empezó a fallar y las cumbias sonaron más lentas. A la gente le encantó y empezó a pedirlas así. Dueñez convirtió el accidente en estilo y vendía sus casetes de cumbias <b>rebajadas</b> en el Puente del Papa.</p>
+      <p lang="en"><b>Sonideros</b> brought the music to the dances with their records and sound systems. One of the most beloved is <b>Gabriel Dueñez, Sonido Dueñez</b>. The story goes that one night his equipment started failing and the cumbias played slower. The crowd loved it and began asking for them that way. Dueñez turned the accident into a style and sold his cassettes of <b>rebajada</b> (slowed-down) cumbia on the Puente del Papa.</p>
+      <p lang="es"><b>Celso Piña</b> (1953–2019), <b>El Rebelde del Acordeón</b>, aprendió solo a tocar el acordeón de botones en la Independencia y con su Ronda Bogotá llevó la cumbia colombiana de Monterrey a todo el mundo, mezclándola sin miedo con lo que se le pusiera enfrente.</p>
+      <p lang="en"><b>Celso Piña</b> (1953–2019), <b>El Rebelde del Acordeón</b>, taught himself the button accordion in Colonia Independencia, and with his Ronda Bogotá he took Monterrey's Colombian cumbia around the world, fearlessly mixing it with whatever came his way.</p>
+      <p lang="es">De ahí salieron <b>los cholombianos</b>: los jóvenes de la colonia que hicieron de la cumbia una forma de vivir, con sus camisas holgadas, gorras, peinados con mechones largos y un paso de baile propio. Este firmware es un homenaje a todos ellos.</p>
+      <p lang="en">That is where the <b>cholombianos</b> came from: neighborhood kids who made cumbia a way of life, with loose shirts, caps, long-lock haircuts and a dance step of their own. This firmware is a tribute to all of them.</p>
+    </div>
+    <div>
+      <figure><img src="img/cholombianos.png" alt=""><figcaption lang="es">Ilustración: Alan Dávila</figcaption><figcaption lang="en">Illustration: Alan Dávila</figcaption></figure>
+      <figure style="margin-top:34px"><img src="img/sonideros.png" alt=""></figure>
+    </div>
+  </div>
+</div></section>
+
+<section id="instalar"><div class="wrap">
+  <div class="kicker"><span lang="es">Instalar</span><span lang="en">Install</span></div>
+  <h2 lang="es">Cinco minutos y a bailar</h2>
+  <h2 lang="en">Five minutes and you're dancing</h2>
+  <p lang="es">Necesitas una computadora con <b>Chrome o Edge</b>, un <b>cable USB de datos</b> (no solo de carga) y el FM-1 con batería. Cierra otros programas que usen MIDI.</p>
+  <p lang="en">You need a computer with <b>Chrome or Edge</b>, a <b>USB data cable</b> (not a charge-only one) and the FM-1 with some battery. Close other apps that use MIDI.</p>
+  <ol class="steps">
+    <li><div><b lang="es">Abre el instalador</b><b lang="en">Open the installer</b>
+      <span lang="es">Conecta el FM-1 directo a la computadora, sin hub, y abre <a href="webapp/installer/">el instalador</a>.</span>
+      <span lang="en">Plug the FM-1 straight into the computer, no hub, and open <a href="webapp/installer/">the installer</a>.</span></div></li>
+    <li><div><b lang="es">Presiona Install</b><b lang="en">Press Install</b>
+      <span lang="es">La barra dice "1/2 Firmware". Se escribe el programa nuevo.</span>
+      <span lang="en">The bar reads "1/2 Firmware". The new program is written.</span></div></li>
+    <li><div><b lang="es">El FM-1 se apaga unos segundos. Es normal.</b><b lang="en">The FM-1 goes dark for a few seconds. That's normal.</b>
+      <span lang="es">A la mitad, el FM-1 se reinicia y la pantalla queda negra un momento. <b>No lo desconectes.</b></span>
+      <span lang="en">Halfway through, the FM-1 restarts and the screen stays black for a moment. <b>Don't unplug it.</b></span></div></li>
+    <li><div class="split"><div><b lang="es">Se cargan los sonidos</b><b lang="en">The sounds load</b>
+      <span lang="es">Al prender, la barra dice "2/2 Sounds" y el FM-1 muestra "CARGANDO SONIDOS". Aquí entran la percusión real y los gritos: son los que le dan el sonido original de la cumbia. Solo pasa la primera vez y cuando cambian los sonidos.</span>
+      <span lang="en">When it powers back on, the bar reads "2/2 Sounds" and the FM-1 shows "CARGANDO SONIDOS". This is where the real percussion and the shouts go in: they give the cumbia its original sound. It only happens the first time and when the sounds change.</span></div>
+      <img class="px screen" src="img/pant_cargando.png" alt=""></div></li>
+    <li><div><b lang="es">Listo: dale PLAY</b><b lang="en">Done: hit PLAY</b>
+      <span lang="es">Aparece el logo y luego la pantalla principal. La primera canción sale al azar.</span>
+      <span lang="en">The logo appears, then the main screen. The first song is random.</span></div></li>
+  </ol>
+  <div class="warn">
+    <p lang="es" style="margin:0"><b>Para regresar al firmware oficial</b>, en el mismo instalador abre "Return to official V15". <b>Si una instalación falla</b> y el FM-1 no arranca, normalmente entra solo a su modo de descarga: con <a href="https://github.com/jvitkauskas/m-flasher/releases">M-Flasher</a> (Mac, Windows y Linux) se le vuelve a poner el firmware oficial por el mismo cable, sin abrir nada.</p>
+    <p lang="en" style="margin:0"><b>To go back to the official firmware</b>, open "Return to official V15" in the same installer. <b>If an install fails</b> and the FM-1 won't start, it usually drops into its download mode on its own: <a href="https://github.com/jvitkauskas/m-flasher/releases">M-Flasher</a> (Mac, Windows and Linux) puts the official firmware back over the same cable, no opening required.</p>
+  </div>
+</div></section>
+
+<section id="uso"><div class="wrap">
+  <div class="kicker"><span lang="es">Cómo se usa</span><span lang="en">How to play</span></div>
+  <h2 lang="es">La pantalla</h2>
+  <h2 lang="en">The screen</h2>
+  <div class="anatomy">
+    <img class="px screen" src="img/pant_cumbia.png" alt="">
+    <ol>
+      <li lang="es"><b>Arriba:</b> en qué parte va la canción (intro, acordeón, para la voz, final). Cuando mueves algo, dice qué es y su valor.</li>
+      <li lang="en"><b>Top:</b> which part of the song is playing (intro, accordion, for the voice, ending). When you move something, it says what and its value.</li>
+      <li lang="es"><b>Las cuatro tarjetas:</b> las perillas 1 a 4. Rebajada, reverb, tempo y tono.</li>
+      <li lang="en"><b>The four cards:</b> knobs 1 to 4. Slowdown, reverb, tempo and key.</li>
+      <li lang="es"><b>Al centro:</b> el acordeón, el bailarín (o el DJ en boom bap) y la percusión que manda en ese momento. Todo se mueve con la música; con la rebajada se frena.</li>
+      <li lang="en"><b>Center:</b> the accordion, the dancer (or the DJ in boom bap) and whichever percussion is leading. Everything moves with the music; with the slowdown it slows too.</li>
+      <li lang="es"><b>Abajo:</b> el dado y el mapa de la canción, con la parte que suena encendida.</li>
+      <li lang="en"><b>Bottom:</b> the die and the song map, with the playing part lit.</li>
+    </ol>
+  </div>
+
+  <h2 style="margin-top:64px" lang="es">Los controles</h2>
+  <h2 style="margin-top:64px" lang="en">The controls</h2>
+  <div class="two">
+    <div>
+      <h3 lang="es">Botones de arriba: efectos (mantener)</h3>
+      <h3 lang="en">Top buttons: effects (hold)</h3>
+      <table>
+        <tr><td class="k">FX</td><td class="i"><img src="img/ic_fx_cinta_atras.png" alt=""></td><td lang="es">Cinta para atrás: lo último que sonó, al revés</td><td lang="en">Tape rewind: the last few seconds, backwards</td></tr>
+        <tr><td class="k">SCL</td><td class="i"><img src="img/ic_fx_ahogada.png" alt=""></td><td lang="es">Ahogada: la música opaca, como tras la pared</td><td lang="en">Muffled: the music dull, like behind a wall</td></tr>
+        <tr><td class="k">ENV</td><td class="i"><img src="img/ic_fx_freno.png" alt=""></td><td lang="es">Freno: la tornamesa se apaga</td><td lang="en">Brake: the turntable powers down</td></tr>
+        <tr><td class="k">LFO</td><td class="i"><img src="img/ic_fx_repeticion.png" alt=""></td><td lang="es">Repetición: repite el último pedacito</td><td lang="en">Repeat: loops the last little slice</td></tr>
+        <tr><td class="k">EDIT</td><td class="i"><img src="img/ic_fx_corte.png" alt=""></td><td lang="es">Corte: se van bajo y percusión, regresan en el tiempo</td><td lang="en">Cut: bass and percussion drop out, back on the beat</td></tr>
+        <tr><td class="k">GLO</td><td class="i"></td><td lang="es">La mezcla (ver abajo)</td><td lang="en">The mix (see below)</td></tr>
+      </table>
+      <h3 style="margin-top:30px" lang="es">Botones de abajo</h3>
+      <h3 style="margin-top:30px" lang="en">Bottom buttons</h3>
+      <table>
+        <tr><td class="k">HOME</td><td class="i"></td><td lang="es">Regresa a la pantalla principal</td><td lang="en">Back to the main screen</td></tr>
+        <tr><td class="k">SAVE</td><td class="i"><img src="img/ic_gritos_24.png" alt=""></td><td lang="es">Eco de sonidero en los gritos, sí o no</td><td lang="en">Sonidero echo on the shouts, on or off</td></tr>
+        <tr><td class="k">ARP</td><td class="i"><img src="img/ic_fx_eco_sonidero.png" alt=""></td><td lang="es">Eco a todo (mantener)</td><td lang="en">Echo on everything (hold)</td></tr>
+        <tr><td class="k">SEQ</td><td class="i"><img src="img/ic_fx_boom_bap.png" alt=""></td><td lang="es">Boom bap sí o no</td><td lang="en">Boom bap on or off</td></tr>
+        <tr><td class="k">PLAY</td><td class="i"></td><td lang="es">Toca o para. La canción se repite hasta que la pares o tires el dado</td><td lang="en">Play or stop. The song loops until you stop it or roll the die</td></tr>
+        <tr><td class="k">REC</td><td class="i"></td><td lang="es">El dado: canción nueva</td><td lang="en">The die: a new song</td></tr>
+        <tr><td class="k">OCT−</td><td class="i"></td><td lang="es">La canción anterior</td><td lang="en">The previous song</td></tr>
+        <tr><td class="k">OCT+</td><td class="i"></td><td lang="es">Medio tono arriba, como el último tramo de muchas cumbias</td><td lang="en">Up a half step, like the last stretch of many cumbias</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3 lang="es">Perillas</h3>
+      <h3 lang="en">Knobs</h3>
+      <table>
+        <tr><td class="k">KNOB 1</td><td class="i"><img src="img/ic_fx_rebajada.png" alt=""></td><td lang="es">Rebajada: a la izquierda la cinta se frena hasta 65 %, con todo y afinación</td><td lang="en">Slowdown: turn left and the tape slows to 65 %, pitch and all</td></tr>
+        <tr><td class="k">KNOB 2</td><td class="i"><img src="img/ic_fx_reverb.png" alt=""></td><td lang="es">Reverb</td><td lang="en">Reverb</td></tr>
+        <tr><td class="k">KNOB 3</td><td class="i"></td><td lang="es">Tempo, 20 BPM arriba o abajo</td><td lang="en">Tempo, up or down 20 BPM</td></tr>
+        <tr><td class="k">KNOB 4</td><td class="i"><img src="img/ic_fx_tono.png" alt=""></td><td lang="es">Tono del acordeón: Sol, Do, Fa, Re, La, Si♭</td><td lang="en">Accordion key: G, C, F, D, A, B♭</td></tr>
+        <tr><td class="k">ALGORITHM</td><td class="i"></td><td lang="es">Sentimiento: de exacto como máquina a suelto, con swing y acentos</td><td lang="en">Feel: from machine-tight to loose, with swing and accents</td></tr>
+        <tr><td class="k">PRESETS</td><td class="i"></td><td lang="es">El bajo: el de la canción, tumbao, dub, caminado o saltado</td><td lang="en">The bass: the song's own, tumbao, dub, walking or octave jumps</td></tr>
+        <tr><td class="k">SELECT</td><td class="i"></td><td lang="es">El color de la pantalla</td><td lang="en">Screen color</td></tr>
+        <tr><td class="k">MASTER</td><td class="i"></td><td lang="es">Volumen</td><td lang="en">Volume</td></tr>
+      </table>
+      <h3 style="margin-top:30px" lang="es">Teclado</h3>
+      <h3 style="margin-top:30px" lang="en">Keyboard</h3>
+      <p lang="es">Las <b>teclas blancas</b> tocan el acordeón dentro de la escala de la canción: no hay nota que suene mal. Las <b>teclas negras</b> son los gritos, y entran a tiempo en la siguiente corchea:</p>
+      <p lang="en">The <b>white keys</b> play the accordion inside the song's scale: there's no wrong note. The <b>black keys</b> are the shouts, and they land on the next eighth note:</p>
+      <ol class="gritos">
+        <li>¡Wepa!</li><li>¡Cumbia!</li><li>¡Opa!</li><li>¡A bailar!</li><li>¡Desde Monterrey!</li><li>¡Weweaa!</li><li>¡Pa gozar!</li><li>¡Ave!</li><li>¡Escuchen esto!</li><li>¡Es tu música!</li><li>¡Oh oh oh!</li>
+      </ol>
+      <h3 style="margin-top:30px" lang="es">La mezcla (GLO)</h3>
+      <h3 style="margin-top:30px" lang="en">The mix (GLO)</h3>
+      <p lang="es">Las perillas 1 a 4 son los volúmenes de acordeón, bajo, percusión y gritos. FX, SCL, ENV y LFO callan cada uno; con GLO mantenido lo dejan solo. HOME o GLO otra vez regresan.</p>
+      <p lang="en">Knobs 1 to 4 set accordion, bass, percussion and shout levels. FX, SCL, ENV and LFO mute each one; with GLO held they solo it. HOME or GLO again goes back.</p>
+    </div>
+  </div>
+
+  <div class="gallery">
+    <figure><img class="px" src="img/pant_rebajada.png" alt=""><figcaption lang="es">Rebajada</figcaption><figcaption lang="en">Slowdown</figcaption></figure>
+    <figure><img class="px" src="img/pant_boombap.png" alt=""><figcaption>Boom bap</figcaption></figure>
+    <figure><img class="px" src="img/pant_cinta.png" alt=""><figcaption lang="es">Cinta para atrás</figcaption><figcaption lang="en">Tape rewind</figcaption></figure>
+    <figure><img class="px" src="img/pant_mezcla.png" alt=""><figcaption lang="es">Mezcla: M callada, S sola</figcaption><figcaption lang="en">Mix: M muted, S solo</figcaption></figure>
+    <figure><img class="px" src="img/pant_color.png" alt=""><figcaption lang="es">Ocho colores con SELECT</figcaption><figcaption lang="en">Eight colors with SELECT</figcaption></figure>
+    <figure><img class="px" src="img/pant_arranque.png" alt=""><figcaption lang="es">El arranque</figcaption><figcaption lang="en">Startup</figcaption></figure>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <p lang="es"><b style="color:#fff">CUMBIA</b>, homenaje a Celso Piña, a Sonido Dueñez y a los cholombianos de Monterrey. Idea, dirección e ilustración: Alan Dávila Farías.</p>
+  <p lang="en"><b style="color:#fff">CUMBIA</b>, a tribute to Celso Piña, Sonido Dueñez and Monterrey's cholombianos. Concept, direction and illustration: Alan Dávila Farías.</p>
+  <p lang="es">Hecho sobre <a href="https://github.com/hugelton/Felucca">Felucca</a> de Leo Kuroshita (GPL-3.0). Código fuente: <a href="https://github.com/alandaf-lab/cumbia-fm1">github.com/alandaf-lab/cumbia-fm1</a>. Sin garantía; no está afiliado a M-VAVE. M-VAVE y FM-1 son marcas de sus dueños.</p>
+  <p lang="en">Built on <a href="https://github.com/hugelton/Felucca">Felucca</a> by Leo Kuroshita (GPL-3.0). Source code: <a href="https://github.com/alandaf-lab/cumbia-fm1">github.com/alandaf-lab/cumbia-fm1</a>. No warranty; not affiliated with M-VAVE. M-VAVE and FM-1 are trademarks of their owners.</p>
+</div></footer>
+
+<script>
+  (function () {
+    var root = document.documentElement, btn = document.getElementById("lang"), saved = null;
+    try { saved = localStorage.getItem("cumbia-lang"); } catch (e) {}
+    function set(l) {
+      root.lang = l;
+      btn.textContent = l === "es" ? "EN" : "ES";
+      try { localStorage.setItem("cumbia-lang", l); } catch (e) {}
+    }
+    set(saved || ((navigator.language || "es").slice(0, 2) === "en" ? "en" : "es"));
+    btn.addEventListener("click", function () { set(root.lang === "es" ? "en" : "es"); });
+  })();
+</script>
+</body>
+</html>

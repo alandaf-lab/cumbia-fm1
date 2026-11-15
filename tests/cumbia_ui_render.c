@@ -113,6 +113,10 @@ int main(int argc, char **argv)
     fm1_in.buttons = 0;
     shot(d, "a_mezcla_mute_solo");
     cb_press(B_HOME);
+    cb_solo = 0xFF;
+    cb_mute = 0;
+    cb_levels();
+    run_ms(2500);
     cb_loading = 1;
     cb_load_off = 40000;
     cb_load_ms = 0;          /* (run_ms cuenta fm1_ms desde 0) */

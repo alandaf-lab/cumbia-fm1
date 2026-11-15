@@ -79,10 +79,7 @@ def main(pkg, version, out):
     for f in ("fukiai.ttf", "FUKIAI-LICENSE.txt", "fm1backup.js"):
         if (HERE / f).exists():
             shutil.copy(HERE / f, ed / f)
-    (out / "index.html").write_text(
-        '<!doctype html><meta charset="utf-8"><title>Felucca</title>'
-        '<meta http-equiv="refresh" content="0; url=webapp/installer/">'
-        '<a href="webapp/installer/">Felucca installer</a>\n', encoding="utf-8")
+    shutil.copytree(HERE / "landing", out, dirs_exist_ok=True)   # cumbia: la página (index.html + img/)
     print(f"site: {out}: webapp/installer ({len(html)} B), webapp/editor, firmware/{name} ({len(raw)} B, {product})")
 
 
