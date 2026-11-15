@@ -63,6 +63,14 @@ jobs:
           FELUCCA_UAC: '1'     # audio por USB (hay espacio desde que se quitaron los motores)
         run: ./build.sh
 
+      - name: Tócalo aquí (el firmware en WebAssembly)
+        continue-on-error: true   # (si falla, el sitio sale sin el reproductor)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang lld wasi-libc libclang-rt-dev-wasm32
+          sh web/player/build.sh build/play
+          ls -l build/play/cumbia.wasm
+
       - name: Lo que más ocupa (top 120 símbolos)
         run: |
           ~/.jieli/toolchain/common/bin/objdump -t build/felucca.elf \

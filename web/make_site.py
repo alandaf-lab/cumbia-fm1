@@ -80,6 +80,15 @@ def main(pkg, version, out):
         if (HERE / f).exists():
             shutil.copy(HERE / f, ed / f)
     shutil.copytree(HERE / "landing", out, dirs_exist_ok=True)   # cumbia: la página (index.html + img/)
+    wasm = HERE.parent / "build" / "play" / "cumbia.wasm"         # cumbia: tócalo aquí (web/player/build.sh)
+    if wasm.exists():
+        play = out / "play"
+        play.mkdir(parents=True, exist_ok=True)
+        for f in ("index.html", "worklet.js"):
+            shutil.copy(HERE / "player" / f, play / f)
+        for f in ("kit_perc.js", "gritos.js"):
+            shutil.copy(HERE / f, play / f)
+        shutil.copy(wasm, play / "cumbia.wasm")
     print(f"site: {out}: webapp/installer ({len(html)} B), webapp/editor, firmware/{name} ({len(raw)} B, {product})")
 
 
