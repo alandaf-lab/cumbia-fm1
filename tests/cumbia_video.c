@@ -19,16 +19,17 @@ static const struct { float t; int what; int v; } EV[] = {
     {0.0f, PRESS, B_PLAY},
     {4.0f, PRESS, B_REC},
     {10.6f, GRITO, 0}, {12.4f, GRITO, 8}, {14.2f, GRITO, 9},
-    {16.2f, REB, -30}, {22.4f, REB, 30},
-    {24.2f, PRESS, B_SEQ},
-    {29.2f, DOWN, B_SCL}, {31.6f, UP, B_SCL},
-    {33.2f, DOWN, B_FX}, {34.8f, UP, B_FX},
-    {36.6f, DOWN, B_EDIT}, {38.2f, UP, B_EDIT},
-    {40.2f, DOWN, B_LFO}, {41.8f, UP, B_LFO},
-    {43.6f, DOWN, B_ARP}, {44.0f, GRITO, 6}, {46.4f, UP, B_ARP},
-    {47.2f, PRESS, B_SEQ},
-    {48.2f, PRESS, B_OCTUP},
-    {50.6f, GRITO, 10}, {53.0f, GRITO, 3},
+    {16.2f, REB, -35}, {24.8f, REB, 35},
+    {27.7f, PRESS, B_SEQ},
+    {32.7f, DOWN, B_SCL}, {35.1f, UP, B_SCL},
+    {36.7f, DOWN, B_FX}, {38.3f, UP, B_FX},
+    {40.1f, DOWN, B_EDIT}, {41.7f, UP, B_EDIT},
+    {43.7f, DOWN, B_LFO}, {45.3f, UP, B_LFO},
+    {47.1f, DOWN, B_ARP}, {47.5f, GRITO, 6}, {49.9f, UP, B_ARP},
+    {50.7f, PRESS, B_SEQ},
+    {51.7f, PRESS, B_OCTUP},
+    {54.1f, GRITO, 10}, {56.5f, GRITO, 3},
+    {59.8f, PRESS, B_SEQ}, {62.0f, GRITO, 1},
 };
 int main(int argc, char **argv)
 {
@@ -71,7 +72,8 @@ int main(int argc, char **argv)
             wav_put(w, o[2 * i], o[2 * i + 1]);
         if ((ui += CTL) >= 661u) {        /* un cuadro de UI cada 15 ms, como en el FM-1 */
             ui = 0;
-            if (reb_left) {               /* la perilla se gira poco a poco */
+            static uint32_t slow;
+            if (reb_left && ++slow % 4u == 0u) {   /* la perilla se gira poco a poco (2 s de punta a punta) */
                 int32_t d = reb_left > 0 ? 1 : -1;
                 host_enc[panel.enc[EN_K1]] += d;
                 reb_left -= d;

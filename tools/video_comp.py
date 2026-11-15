@@ -7,20 +7,20 @@ def font(sz, w='Bold'):
     try: f.set_variation_by_name(w)
     except Exception: pass
     return f
-FPS=30; DUR=62
+FPS=30; DUR=70; SCR_END=59.8; TOY=(59.8,64.4); OUT=64.4
 raw=np.memmap(f'{R}/build/video/toma.rgb',np.uint8,'r').reshape(-1,240,240,3)
 CAP=[  # inicio, fin, botón, mantener, español, inglés
  (4.0,10.3,'REC',0,'Tira el dado:\nnace una cumbia nueva','Roll the die: a brand-new cumbia'),
  (10.3,16.0,'TECLAS NEGRAS · BLACK KEYS',0,'Gritos con eco\nde sonidero','Shouts with a sonidero echo'),
- (16.0,24.0,'KNOB 1',0,'La rebajada:\nla cinta se frena','Rebajada: the tape slows down,\npitch and all'),
- (24.0,29.0,'SEQ',0,'Boom bap:\nentra el DJ','Boom bap: the DJ steps in'),
- (29.0,32.8,'SCL',1,'Ahogada','Muffled'),
- (32.8,36.3,'FX',1,'Cinta para atrás','Tape rewind'),
- (36.3,39.8,'EDIT',1,'Corte','Cut'),
- (39.8,43.3,'LFO',1,'Repetición','Repeat'),
- (43.3,47.0,'ARP',1,'Eco a todo','Echo on everything'),
- (47.0,52.5,'OCT+',0,'Medio tono arriba,\ncomo en el último tramo','Up a half step,\nlike the last stretch of the song'),
- (52.5,56.0,'',0,'Una canción distinta\ncada vez','A different song every time'),
+ (16.0,27.5,'KNOB 1',0,'La rebajada:\nla cinta se frena','Rebajada: the tape slows down,\npitch and all'),
+ (27.5,32.5,'SEQ',0,'Boom bap:\nentra el DJ','Boom bap: the DJ steps in'),
+ (32.5,36.3,'SCL',1,'Ahogada','Muffled'),
+ (36.3,39.8,'FX',1,'Cinta para atrás','Tape rewind'),
+ (39.8,43.3,'EDIT',1,'Corte','Cut'),
+ (43.3,46.8,'LFO',1,'Repetición','Repeat'),
+ (46.8,50.5,'ARP',1,'Eco a todo','Echo on everything'),
+ (50.5,56.0,'OCT+',0,'Medio tono arriba,\ncomo en el último tramo','Up a half step,\nlike the last stretch of the song'),
+ (56.0,59.6,'',0,'Una canción distinta\ncada vez','A different song every time'),
 ]
 logo=Image.open(f'{IMG}/logo.png').convert('L')
 dancer=[]; im=Image.open(f'{IMG}/bailarin.gif')
@@ -37,7 +37,7 @@ class Fmt:
     def __init__(s,W,H,vert):
         s.W,s.H,s.v=W,H,vert
         if vert: s.scr=(60,560); s.cap=(80,150,920); s.foot=1720
-        else: s.scr=(110,60); s.cap=(1180,0,660); s.foot=None
+        else: s.scr=(110,60); s.cap=(1170,0,680); s.foot=None
         s.cache={}
     def caption(s,c):
         if c in s.cache: return s.cache[c]
@@ -48,6 +48,8 @@ class Fmt:
         lines=[]
         if btn: lines.append(('chip',btn,hold))
         lines.append(('es',es)); lines.append(('en',en))
+        while max(d.textlength(l,font=fe) for l in es.split('\n'))>w and fe.size>40: fe=font(fe.size-4)
+        while max(d.textlength(l,font=fn) for l in en.split('\n'))>w and fn.size>24: fn=font(fn.size-2,'Regular')
         hes=d.multiline_textbbox((0,0),es,font=fe,spacing=10)[3]; hen=d.multiline_textbbox((0,0),en,font=fn,spacing=8)[3]
         tot=(70 if btn else 0)+hes+34+hen
         cy=y+(300-tot)//2 if s.v else (s.H-tot)//2
@@ -62,7 +64,7 @@ class Fmt:
     def frame(s,n):
         t=n/FPS; out=Image.new('L',(s.W,s.H),0); rgb=None
         # pantalla
-        sa=ease((t-3.4)/0.6)*ease((56.3-t)/0.6)
+        sa=ease((t-3.4)/0.6)*ease((SCR_END-t)/0.6)
         if sa>0:
             sc=Image.fromarray(raw[min(n,len(raw)-1)]).resize((960,960),Image.NEAREST)
             base=Image.new('RGB',(s.W,s.H)); x,y=s.scr
@@ -77,9 +79,11 @@ class Fmt:
         # intro
         ia=fade(t,-1,3.8,0.5)
         if ia>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*ia)),lay,s.intro())
-        oa=fade(t,56.4,DUR+1,0.6)*ease((DUR-0.1-t)/0.6)
+        oa=fade(t,OUT,DUR+1,0.6)*ease((DUR-0.1-t)/0.6)
         if oa>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*oa)),lay,s.outro(t))
-        if s.v and 3.4<t<56.4:
+        ta=fade(t,TOY[0],TOY[1],0.5)
+        if ta>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*ta)),lay,s.toy())
+        if s.v and 3.4<t<SCR_END:
             lay=Image.composite(Image.new('L',(s.W,s.H),110),lay,s.foot_l())
         rgb.paste((255,255,255),(0,0),lay)
         return rgb
@@ -92,6 +96,25 @@ class Fmt:
         for txt,f,c in [('Firmware de cumbia para el M-VAVE FM-1',font(44 if s.v else 48,'SemiBold'),255),('A cumbia firmware for the M-VAVE FM-1',font(34 if s.v else 36,'Regular'),150)]:
             w=d.textlength(txt,font=f); d.text(((s.W-w)//2,y),txt,font=f,fill=c); y+=70
         s.cache['intro']=L; return L
+    def toy(s):
+        if 'toy' in s.cache: return s.cache['toy']
+        L=Image.new('L',(s.W,s.H)); d=ImageDraw.Draw(L)
+        if s.v:
+            es='En 2001, Toy Selectah\ncruzó la cumbia de Celso Piña\ncon el hip hop y el reggae:\n«Cumbia sobre el río»'
+            en='In 2001, Toy Selectah crossed\nCelso Piña\'s cumbia with hip hop\nand reggae on “Cumbia sobre el río”'
+            fe,fn,w=font(64),font(40,'Regular'),940
+        else:
+            es='En 2001, Toy Selectah cruzó\nla cumbia de Celso Piña con el hip hop\ny el reggae: «Cumbia sobre el río»'
+            en='In 2001, Toy Selectah crossed Celso Piña\'s cumbia with hip hop\nand reggae on “Cumbia sobre el río”'
+            fe,fn,w=font(68),font(40,'Regular'),1700
+        while max(d.textlength(l,font=fe) for l in es.split('\n'))>w: fe=font(fe.size-4)
+        h1=d.multiline_textbbox((0,0),es,font=fe,spacing=14)[3]; h2=d.multiline_textbbox((0,0),en,font=fn,spacing=10)[3]
+        y=(s.H-h1-50-h2)//2
+        for txt,f,c,sp,h in [(es,fe,255,14,h1),(en,fn,150,10,h2)]:
+            for ln in txt.split('\n'):
+                lw=d.textlength(ln,font=f); d.text(((s.W-lw)//2,y),ln,font=f,fill=c); y+=f.size+sp
+            y+=50
+        s.cache['toy']=L; return L
     def foot_l(s):
         if 'foot' in s.cache: return s.cache['foot']
         L=Image.new('L',(s.W,s.H)); d=ImageDraw.Draw(L); f=font(34,'Medium')
@@ -102,7 +125,7 @@ class Fmt:
         if key not in s.cache:
             L=Image.new('L',(s.W,s.H)); d=ImageDraw.Draw(L)
             lines=[('Gratis · Free',font(56),255),('alandaf-lab.github.io/cumbia-fm1',font(40,'Medium'),255),
-                   ('Homenaje a Celso Piña, Sonido Dueñez\ny los cholombianos de Monterrey',font(34,'Regular'),150),('Alan Daf',font(34,'Regular'),150)]
+                   ('Homenaje a Celso Piña, Sonido Dueñez,\nToy Selectah y los cholombianos de Monterrey',font(34,'Regular'),150),('Alan Daf',font(34,'Regular'),150)]
             if s.v:
                 lw=700; lg=logo.resize((lw,int(logo.height*lw/logo.width)),Image.LANCZOS); L.paste(lg,((s.W-lw)//2,170))
                 y=1180; 
@@ -119,7 +142,7 @@ class Fmt:
             s.cache[key]=L
         L=s.cache[key].copy()
         dh=560 if s.v else 720; dw=int(dh*384/599)
-        df=dancer_at(int((t-56.4)*1000)).resize((dw,dh),Image.LANCZOS)
+        df=dancer_at(int((t-OUT)*1000)).resize((dw,dh),Image.LANCZOS)
         L.paste(df,(((s.W-dw)//2,560) if s.v else (260,(s.H-dh)//2)))
         return L
 if __name__=='__main__':
