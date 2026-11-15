@@ -37,6 +37,9 @@ static struct {
     uint8_t page;                        /* 0 la canción, 1 la mezcla (GLO) */
     uint8_t push[5];                     /* los efectos push mantenidos (CB_PUSH) */
     uint16_t songs;                      /* canciones sacadas con el dado */
+    uint8_t chola;                       /* HOME (tocar): baila el cholombiano o la cholombiana */
+    uint8_t map, home_arm;               /* HOME (mantener): el mapa de los botones mientras se sostiene */
+    uint32_t home_t;
 } cbu = {0};
 
 static uint16_t cb_rgb(uint32_t c, uint32_t k)   /* el color a k / 15 */
@@ -212,7 +215,28 @@ static void cb_ui_input(void)
         cb_say(cbu.page ? "MEZCLA" : "CANCION");
         cbu.dirty |= 3;
     }
-    if (CB_PR(B_HOME) && cbu.page) {
+    if (!cbu.page) {                     /* HOME: tocar cambia quién baila; mantener enseña qué hace cada botón */
+        if (CB_PR(B_HOME)) {
+            cbu.home_t = fm1_ms;
+            cbu.home_arm = 1;
+        }
+        if (cbu.home_arm && CB_HELD(B_HOME) && !cbu.map && fm1_ms - cbu.home_t >= 350u) {
+            cbu.map = 1;
+            cbu.dirty = 7;
+        }
+        if (cbu.home_arm && !CB_HELD(B_HOME)) {
+            cbu.home_arm = 0;
+            if (cbu.map) {
+                cbu.map = 0;
+                lcd_fill(0, 198, 240, 4, 0);
+                cbu.dirty = 7;
+            } else {
+                cbu.chola ^= 1u;
+                cb_say(cbu.chola ? "LA CHOLOMBIANA" : "EL CHOLOMBIANO");
+                cbu.dirty |= 3;
+            }
+        }
+    } else if (CB_PR(B_HOME) && cbu.page) {
         cbu.page = 0;
         cbu.dirty |= 3;
     }
@@ -460,7 +484,7 @@ static void cb_draw_panel(void)
     if (cbc.bb)
         cb_spr(78, 19, SPR_DJ_0 + cbu.dancer % 4u, cbu.ramp);   /* (84 x 90: del tamaño del bailarín) */
     else
-        cb_spr(88, 13, SPR_BAILARIN_0 + cbu.dancer % 8u, cbc.cinta ? cbu.rdim : cbu.ramp);
+        cb_spr(88, 13, (cbu.chola ? SPR_CHOLA_0 : SPR_BAILARIN_0) + cbu.dancer % 8u, cbc.cinta ? cbu.rdim : cbu.ramp);
     cb_spr(164, 33, cbu.rkind + cbu.card_r, cbu.ramp);
     {                                    /* los efectos push que suenan: sus íconos arriba a la izquierda */
         int32_t x = 8;
@@ -588,6 +612,67 @@ static void cb_draw_loading(void)        /* mientras el instalador escribe los s
     cb_text_c(120, 88, &AF_S, "NO DESCONECTES EL FM-1", cbu.mid);
     cv_blit(0, 76);
 }
+/* HOME mantenido: qué hace cada botón, en el orden del panel */
+typedef struct { const char *b; uint16_t spr; const char *w; } cb_map_t;
+static void cb_map_row(int32_t y, const cb_map_t *m)   /* 6 botones repartidos según lo ancho de sus palabras */
+{
+    int32_t w[6], tot = 0, gap, x;
+    uint32_t i;
+    for (i = 0; i < 6u; i++) {
+        int32_t a = text_w(&AF_S, m[i].w), c = text_w(&AF_S, m[i].b);
+        w[i] = a > c ? a : c;
+        if (m[i].spr < SPR_N && (int32_t)CB_SPR[m[i].spr].w > w[i])
+            w[i] = CB_SPR[m[i].spr].w;
+        tot += w[i];
+    }
+    gap = (240 - tot) / 7;
+    uint32_t stag = gap < 6;             /* si no caben juntas, una sí y una no un renglón abajo */
+    if (stag) {
+        tot = 0;
+        for (i = 0; i < 6u; i++) {
+            int32_t c = text_w(&AF_S, m[i].b), s2 = m[i].spr < SPR_N ? (int32_t)CB_SPR[m[i].spr].w : 0;
+            w[i] = c > s2 ? c : s2;
+            if (w[i] < 24)
+                w[i] = 24;
+            tot += w[i];
+        }
+        gap = (240 - tot) / 7;
+    }
+    x = gap + (240 - tot - gap * 7) / 2;
+    for (i = 0; i < 6u; i++) {
+        int32_t cx = x + w[i] / 2;
+        cb_text_c(cx, y, &AF_S, m[i].b, cbu.mid);
+        if (m[i].spr < SPR_N)
+            cb_spr(cx - (int32_t)CB_SPR[m[i].spr].w / 2, y + 17 + (24 - (int32_t)CB_SPR[m[i].spr].h) / 2, m[i].spr, cbu.ramp);
+        else if (m[i].w[0] == 'T')       /* TOCA: el triángulo */
+            for (int32_t k = 0; k < 10; k++)
+                cv_rect(cx - 4 + k, y + 24 + k / 2, 1, 10 - k, cbu.fg);
+        cb_text_c(cx, y + 44 + (stag && (i & 1u) ? 14 : 0), &AF_S, m[i].w, cbu.fg);
+        x += w[i] + gap;
+    }
+}
+/* HOME mantenido: qué hace cada botón, en el orden del panel */
+static void cb_draw_map(void)
+{
+    static const cb_map_t TOP[6] = {
+        {"FX", SPR_FX_CINTA_ATRAS, "CINTA"}, {"SCL", SPR_FX_AHOGADA, "AHOGA"}, {"ENV", SPR_FX_FRENO, "FRENO"},
+        {"LFO", SPR_FX_REPETICION, "REPITE"}, {"EDIT", SPR_FX_CORTE, "CORTE"}, {"GLO", SPR_N, "MEZCLA"}};
+    static const cb_map_t BOT[6] = {
+        {"HOME", SPR_N, "BAILE"}, {"SAVE", SPR_GRITOS_24, "ECO"}, {"ARP", SPR_FX_ECO_SONIDERO, "ECO+"},
+        {"SEQ", SPR_FX_BOOM_BAP, "BOOM"}, {"PLAY", SPR_N, "TOCA"}, {"REC", SPR_DADO_0, "DADO"}};
+    cv_begin(240, 120, 0);
+    cb_text_c(120, 3, &AF_M, "QUE HACE CADA BOTON", cbu.fg);
+    cb_text_c(120, 22, &AF_S, "EFECTOS: MANTENER", cbu.dim);
+    cb_map_row(40, TOP);
+    cv_rect(10, 118, 220, 1, cbu.dim);
+    cv_blit(0, 0);
+    cv_begin(240, 120, 0);
+    cb_map_row(8, BOT);
+    cv_rect(10, 76, 220, 1, cbu.dim);
+    cb_text_c(120, 82, &AF_S, "OCT-  LA ANTERIOR    OCT+  MEDIO TONO", cbu.mid);
+    cb_text_c(120, 100, &AF_S, "TECLAS NEGRAS: GRITOS", cbu.mid);
+    cv_blit(0, 120);
+}
 static void cb_ui_draw(void)
 {
     static uint32_t last_off = 0xFFFFFFFFu;
@@ -601,6 +686,12 @@ static void cb_ui_draw(void)
             }
             return;
         }
+    }
+    if (cbu.map) {
+        if (cbu.dirty)
+            cb_draw_map();
+        cbu.dirty = 0;
+        return;
     }
     static uint32_t last_reb = 0xFF;
     if (cbc.reb != last_reb) {

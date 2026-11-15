@@ -36,17 +36,19 @@ static void cb_press(uint32_t b) { host_pressed |= 1u << panel.btn[b]; }
 static void run_ms(uint32_t ms)              /* audio y UI juntos: un cuadro de UI cada 15 ms */
 {
     int32_t o[2 * CTL];
+    static uint32_t base;
     uint32_t t, acc = 0;
     for (t = 0; t < ms * 441u / 10u; t += CTL) {
         mix_block(o, CTL);
         acc += CTL;
-        fm1_ms = t / 44u;
+        fm1_ms = base + t / 44u;
         if (acc >= 661u) {
             acc = 0;
             cb_ui_input();
             cb_ui_draw();
         }
     }
+    base = fm1_ms;
 }
 int main(int argc, char **argv)
 {
@@ -123,6 +125,22 @@ int main(int argc, char **argv)
     cb_load_ms = 0;          /* (run_ms cuenta fm1_ms desde 0) */
     run_ms(100);
     shot(d, "b_cargando");
+    run_ms(5500);
+    {                                    /* HOME mantenido: el mapa; tocado: la cholombiana */
+        uint32_t hb = 1u << panel.btn[B_HOME];
+        host_pressed |= hb;
+        fm1_in.buttons |= hb;
+        run_ms(700);
+        shot(d, "c_mapa");
+        fm1_in.buttons &= ~hb;
+        run_ms(200);
+        host_pressed |= hb;
+        fm1_in.buttons |= hb;
+        run_ms(60);
+        fm1_in.buttons &= ~hb;
+        run_ms(1500);
+        shot(d, "d_cholombiana");
+    }
     printf("pantallas en %s\n", d);
     return 0;
 }

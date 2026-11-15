@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 GFX = ROOT / "assets/gfx"
 
 SPRITES = (
-    [f"bailarin_{i}" for i in range(8)] + [f"dj_{i}" for i in range(4)] +
+    [f"bailarin_{i}" for i in range(8)] + [f"chola_{i}" for i in range(8)] + [f"dj_{i}" for i in range(4)] +
     [f"acordeon_{i}" for i in range(3)] + [f"guacharaca_{i}" for i in range(4)] +
     [f"{n}_{i}" for n in ("bajo", "congas", "timbal", "micro") for i in range(3)] +
     [f"dado_{i}" for i in range(10)] +
