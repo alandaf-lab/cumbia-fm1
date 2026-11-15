@@ -146,8 +146,12 @@ class Fmt:
         L=s.cache[key].copy()
         dh=520 if s.v else 640; dw=int(dh*384/599); ms=int((t-OUT)*1000)
         a=dancer_at(ms).resize((dw,dh),Image.LANCZOS); b=dancer_at(ms,chola).resize((dw,dh),Image.LANCZOS)
-        if s.v: y=590; L.paste(a,(s.W//2-dw+30,y)); L.paste(b,(s.W//2-30,y))
-        else: y=(s.H-dh)//2; L.paste(a,(80,y)); L.paste(b,(80+dw-40,y))
+        from PIL import ImageChops
+        def put(im,xy):
+            box=(xy[0],xy[1],xy[0]+im.width,xy[1]+im.height)
+            L.paste(ImageChops.lighter(L.crop(box),im),box)
+        if s.v: y=590; put(a,(s.W//2-dw+30,y)); put(b,(s.W//2-30,y))
+        else: y=(s.H-dh)//2; put(a,(80,y)); put(b,(80+dw-40,y))
         return L
 if __name__=='__main__':
     mode=sys.argv[1]; F=Fmt(1080,1920,True) if mode=='v' else Fmt(1920,1080,False)
