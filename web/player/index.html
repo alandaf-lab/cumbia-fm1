@@ -131,8 +131,8 @@
   <p id="note"><span lang="es">Sube el volumen. Se escucha mejor con audífonos o bocinas.</span><span lang="en">Turn the volume up. Best with headphones or speakers.</span></p>
 </div></div>
 
-<script src="kit_perc.js"></script>
-<script src="gritos.js"></script>
+<script src="kit_perc.js?v=__V__"></script>
+<script src="gritos.js?v=__V__"></script>
 <script>
 (function () {
   // idioma, como en la página
@@ -250,8 +250,8 @@
     try {
       var AC = window.AudioContext || window.webkitAudioContext;
       ctx = new AC({ sampleRate: 44100, latencyHint: 'interactive' });
-      await ctx.audioWorklet.addModule('worklet.js');
-      var bytes = await (await fetch('cumbia.wasm')).arrayBuffer();
+      await ctx.audioWorklet.addModule('worklet.js?v=__V__');
+      var bytes = await (await fetch('cumbia.wasm?v=__V__')).arrayBuffer();
       var slots = [KIT_PERC, GRITOS, GRITOS2].map(function (s) { return { hdr: b64(s.hdr), data: b64(s.data) }; });
       node = new AudioWorkletNode(ctx, 'cumbia', { numberOfInputs: 0, outputChannelCount: [2] });
       gain = ctx.createGain(); gain.gain.value = document.getElementById('vol').value / 100;

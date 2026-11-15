@@ -84,8 +84,9 @@ def main(pkg, version, out):
     if wasm.exists():
         play = out / "play"
         play.mkdir(parents=True, exist_ok=True)
-        for f in ("index.html", "worklet.js"):
-            shutil.copy(HERE / "player" / f, play / f)
+        (play / "index.html").write_text(              # (?v=: GitHub Pages guarda los archivos 10 minutos)
+            (HERE / "player" / "index.html").read_text(encoding="utf-8").replace("__V__", version), encoding="utf-8")
+        shutil.copy(HERE / "player" / "worklet.js", play / "worklet.js")
         for f in ("kit_perc.js", "gritos.js"):
             shutil.copy(HERE / f, play / f)
         shutil.copy(wasm, play / "cumbia.wasm")
