@@ -7,7 +7,7 @@ def font(sz, w='Bold'):
     try: f.set_variation_by_name(w)
     except Exception: pass
     return f
-FPS=30; DUR=70; SCR_END=59.8; TOY=(59.8,64.4); OUT=64.4
+FPS=30; DUR=66; SCR_END=59.8; TOY=(999,999); OUT=60.2
 raw=np.memmap(f'{R}/build/video/toma.rgb',np.uint8,'r').reshape(-1,240,240,3)
 CAP=[  # inicio, fin, botón, mantener, español, inglés
  (4.0,10.3,'REC',0,'Tira el dado:\nnace una cumbia nueva','Roll the die: a brand-new cumbia'),
@@ -125,7 +125,7 @@ class Fmt:
         if key not in s.cache:
             L=Image.new('L',(s.W,s.H)); d=ImageDraw.Draw(L)
             lines=[('Gratis · Free',font(56),255),('alandaf-lab.github.io/cumbia-fm1',font(40,'Medium'),255),
-                   ('Homenaje a Celso Piña, Sonido Dueñez\ny los cholombianos de Monterrey',font(34,'Regular'),150),('Alan Daf',font(34,'Regular'),150)]
+                   ('Homenaje a Celso Piña, Sonido Dueñez,\nlos cholombianos de Monterrey y toda la gente\nque ha hecho este movimiento',font(34,'Regular'),150),('Alan Daf',font(34,'Regular'),150)]
             if s.v:
                 lw=700; lg=logo.resize((lw,int(logo.height*lw/logo.width)),Image.LANCZOS); L.paste(lg,((s.W-lw)//2,170))
                 y=1180; 
