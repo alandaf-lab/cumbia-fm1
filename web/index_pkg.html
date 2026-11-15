@@ -1,13 +1,13 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-only
      Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments -->
-<html lang="ja">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Felucca</title>
+<title>CUMBIA · Instalar</title>
 <style>
-  :root { --bg: #fff; --fg: #000; --dim: #777; }
+  :root { --bg: #000; --fg: #fff; --dim: #888; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #000; --fg: #fff; --dim: #888; }
   }
@@ -18,7 +18,8 @@
   h1 { font-size: 24px; font-weight: 600; margin: 0 0 24px; }
   .lang { float: right; font-size: 13px; color: var(--dim); cursor: pointer; text-decoration: underline; background: none; padding: 0; color: var(--dim); }
   p { margin: 0 0 16px; }
-  button { font: inherit; background: var(--fg); color: var(--bg); border: 0; padding: 8px 20px; cursor: pointer; }
+  button { font: inherit; font-weight: 700; background: var(--fg); color: var(--bg); border: 0; padding: 12px 26px; border-radius: 999px; cursor: pointer; }
+  .lang { border: 1px solid var(--fg) !important; border-radius: 999px; padding: 3px 12px !important; text-decoration: none !important; color: var(--fg) !important; font-weight: 400 !important; }
   button:disabled { opacity: .3; cursor: default; }
   #status { margin-top: 16px; min-height: 1.6em; }
   .small { color: var(--dim); font-size: 13px; }
@@ -29,13 +30,13 @@
 <body>
 <main>
   <button class="lang" id="lang"></button>
-  <h1>Felucca</h1>
+  <h1><a href="../../"><img src="../../img/logo.png" alt="CUMBIA" style="height:84px;width:auto;display:block"></a></h1>
   <p data-t="intro"></p>
   <p data-t="warn"></p>
   <p class="small" data-t="direct"></p>
   <p class="small" data-t="beta"></p>
   <p class="small"><span data-t="brick"></span>
-    <a href="https://github.com/kurogedelic/FM-1-transporter" target="_blank" rel="noopener" style="color:inherit">FM-1-transporter</a></p>
+    <a href="https://github.com/jvitkauskas/m-flasher/releases" target="_blank" rel="noopener" style="color:inherit">M-Flasher</a></p>
   <p><button id="go" disabled data-t="install"></button></p>
   <details style="margin-top:24px">
     <summary data-t="stockTitle"></summary>
@@ -49,68 +50,68 @@
   <progress id="bar" max="100" value="0"></progress>
   <p id="status"></p>
   <pre id="log"></pre>
-  <p><a href="../editor/" style="color:inherit" data-t="editor"></a></p>
-  <p class="small">Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener" style="color:inherit">Hügelton Instruments</a>, with its PHASE engine and drum voices, the Hügelton Sample Pack (CC0 1.0) and Fukiai icons (MIT).<br>
+  <p class="small">CUMBIA: Alan Daf. Built on Felucca by Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener" style="color:inherit">Hügelton Instruments</a>, with its PHASE engine and drum voices, the Hügelton Sample Pack (CC0 1.0) and Fukiai icons (MIT).<br>
     Font: Inter Tight (The Inter Project Authors, SIL OFL 1.1). Samples: Versilian Studios VSCO-2 Community Edition and VCSL (CC0 1.0).<br>
     FM6 engine: msfa from Dexed (Google Inc., Pascal Gauthier, Apache-2.0). The package also holds three JieLi AC79 SDK files, uboot.boot, cfg_tool.bin and eq_cfg_hw.bin (JieLi Technology, Apache-2.0). <a href="../../firmware/LICENSING.md" style="color:inherit">Licences</a>: <a href="../../firmware/LICENSE" style="color:inherit">GPL-3.0</a>, <a href="../../firmware/LICENSES/Apache-2.0.txt" style="color:inherit">Apache-2.0</a>, <a href="../../firmware/LICENSES/" style="color:inherit">all</a>.<br>
     M-VAVE and FM-1 are trademarks of their respective owners.<br>
-    <span data-t="license"></span> <a href="https://github.com/hugelton/Felucca" target="_blank" rel="noopener" style="color:inherit">github.com/hugelton/Felucca</a></p>
+    <span data-t="license"></span> <a href="https://github.com/alandaf-lab/cumbia-fm1" target="_blank" rel="noopener" style="color:inherit">github.com/alandaf-lab/cumbia-fm1</a> · <a href="https://github.com/hugelton/Felucca" target="_blank" rel="noopener" style="color:inherit">Felucca</a></p>
 </main>
 <script type="module">
 /*LIB*/
 const $ = (id) => document.getElementById(id);
 const TEXT = {
-  ja: {
-    intro: "FM-1 を USB で接続してください。（Chrome か Edge で使えます）",
-    warn: "書き込み中は USB を抜かないでください。途中で FM-1 が再起動し（数秒画面が消えます）、そのあと音を読み込みます。",
-    install: "インストール", other: "English",
-    editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
-    direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
-    brick: "万一インストールに失敗して起動しなくなった場合は、復旧に Transporter が必要です:",
-    beta: "Felucca 1.0 は実地テスト版です。不具合は GitHub で知らせてください。このカスタムファームウェアを使ったことで FM-1 が壊れたり不具合が起きたりしても、作者は一切の責任を負いません。自己責任でお使いください。",
-    back: "M-VAVEから公式FM-1 V15を取得し、未変更のFM-1.fwscを選んでください。ファイルはこのブラウザ内で検証し、サーバーへ送りません。",
-    stockTitle: "公式V15に戻す", stockFile: "公式FM-1.fwsc", stockGo: "バックアップして公式V15へ戻す",
-    stockBackup: "現在の曲・保存曲・音色バンク・サンプル・設定を先に保存します。全体バックアップ非対応版は、Feluccaを更新してから行ってください。復元はFeluccaを再インストールしてエディタから行います。",
-    stockRecovery: "更新中断の再開：全体バックアップはすでにパソコンへ保存済み",
-    stockValid: "公式V15を確認しました", stockConfirm: "全体バックアップファイルをパソコンに保存できましたか？ 続けると公式V15へ戻します。Feluccaの曲は公式V15では開けません。",
-    stockNeedBackup: "書き込みモードからはバックアップできません。保存済みバックアップがある場合だけ、更新中断の再開にチェックしてください。",
-    stockUnsupported: "このFeluccaは全体バックアップに未対応です。先に最新版をインストールしてください。",
-    backup: "全体バックアップ保存中 ", stockError: "公式ファイルを確認できません: ",
-    nomidi: "このブラウザでは使えません。Chrome か Edge で開いてください。", loadfail: "読み込めませんでした: ",
-    start: "開始します", verify: "確認中", loader: "書き込みモードに切り替え中", write: "書き込み中",
-    reboot: "再起動中", done: "完了しました", stopped: "途中で止まりました。USB を挿し直してもう一度押してください。",
-    error: "エラー: ",
-    denied: "MIDI（SysEx）の使用が許可されませんでした。アドレスバーのサイト設定で MIDI を許可して、もう一度押してください。",
-    notfound: "FM-1 が見つかりません。USB ケーブル（データ通信用か）を確かめ、MIDI を使う他のアプリを閉じてから、もう一度押してください。",
-    model: "接続されている機器は FM-1 ではありません。",
-    lost: "USB の接続が切れました。挿し直してもう一度押してください。",
-    noloader: "書き込みモードの FM-1 が見つかりません。USB を挿し直してもう一度押してください（終わるまで書き込みモードのままです）。",
-    noreturn: "FM-1 が戻ってきません。電源を入れ直してください。",
-    mismatch: "書き込みは終わりましたが、FM-1 が別のバージョンを報告しています: ",
-    badpkg: "インストールするファイルが壊れています。ページを再読み込みしてください。",
-    leave: "書き込み中です。ページを閉じないでください。",
-    license: "GPL-3.0、無保証。ソース:",
-    kit: "2/2 音: 書き込み中 ", kitFail: "サンプルを書き込めませんでした: ",
+  es: {
+    intro: "Conecta el FM-1 por USB. (Funciona en Chrome o Edge.)",
+    warn: "No desconectes el cable mientras se escribe. A la mitad, el FM-1 se reinicia (la pantalla se apaga unos segundos) y luego carga los sonidos.",
+    install: "Instalar", other: "English",
+    editor: "",
+    direct: "Conecta el cable USB directo a la computadora, sin hub.",
+    brick: "Si una instalación falla y el FM-1 ya no arranca, normalmente entra solo a su modo de descarga y se recupera con",
+    beta: "CUMBIA se prueba en uso real; si algo falla, avísanos en GitHub. Los autores no se hacen responsables si tu FM-1 se daña o falla por usar este firmware no oficial. Úsalo bajo tu propio riesgo.",
+    back: "Descarga el firmware oficial V15 del FM-1 en M-VAVE y elige el FM-1.fwsc sin modificar. El navegador lo revisa aquí mismo; no se manda a ningún servidor.",
+    stockTitle: "Regresar al firmware oficial V15", stockFile: "FM-1.fwsc oficial", stockGo: "Respaldar y regresar al oficial V15",
+    stockBackup: "Primero se guardan la música, los sonidos, las muestras y los ajustes que tenga el FM-1.",
+    stockRecovery: "Continuar una actualización interrumpida: ya guardé un respaldo completo en esta computadora",
+    stockValid: "Firmware oficial V15 verificado", stockConfirm: "¿Ya quedó guardado el respaldo completo en esta computadora? Si continúas, el FM-1 regresa al oficial V15.",
+    stockNeedBackup: "En modo de actualización no se puede sacar un respaldo. Elige continuar solo si ya guardaste uno completo.",
+    stockUnsupported: "Esta versión no permite el respaldo completo. Instala primero la versión actual.",
+    backup: "Guardando respaldo completo ", stockError: "No se pudo validar el firmware oficial: ",
+    nomidi: "Este navegador no puede hacerlo. Abre la página en Chrome o Edge.", loadfail: "No se pudo cargar: ",
+    start: "1/2 Firmware: empezando", verify: "1/2 Firmware: verificando", loader: "1/2 Firmware: cambiando a modo de actualización", write: "1/2 Firmware: escribiendo",
+    reboot: "1/2 Firmware: reiniciando (la pantalla se apaga un momento)", done: "Listo. Dale PLAY.", stopped: "Se detuvo. Vuelve a conectar el cable y presiona Instalar otra vez.",
+    error: "Error: ",
+    denied: "No se permitió el acceso a MIDI (SysEx). Permítelo en los ajustes del sitio (barra de direcciones) y presiona Instalar otra vez.",
+    notfound: "No se encuentra el FM-1. Revisa que el cable sea de datos, cierra otras apps que usen MIDI y presiona Instalar otra vez.",
+    model: "El aparato conectado no es un FM-1.",
+    lost: "Se perdió la conexión USB. Vuelve a conectarlo y presiona Instalar otra vez.",
+    noloader: "No se encuentra el FM-1 en modo de actualización. Vuelve a conectar el cable y presiona Instalar otra vez (se queda en ese modo hasta terminar).",
+    noreturn: "El FM-1 no regresó. Apágalo y préndelo.",
+    mismatch: "Se escribió, pero el FM-1 reporta otra versión: ",
+    badpkg: "El archivo de instalación está dañado. Recarga la página.",
+    leave: "Escribiendo. No cierres la página.",
+    license: "GPL-3.0, sin garantía. Código:",
+    kit: "2/2 Sonidos: escribiendo ", kitFail: "No se pudieron escribir los sonidos: ",
+    ready: "Listo para instalar",
   },
   en: {
     intro: "Connect the FM-1 by USB. (Works in Chrome or Edge.)",
     warn: "Do not unplug the USB cable while writing. Halfway through, the FM-1 restarts (the screen goes dark for a few seconds); then it loads the sounds.",
-    install: "Install", other: "日本語",
-    editor: "Editor (after installing: edit sounds and sequences from the computer)",
-    direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
-    brick: "If an install fails and the FM-1 no longer starts, recovering it needs a Transporter:",
-    beta: "Felucca 1.0 is a field-testing release; please report problems on GitHub. The author accepts no responsibility if your FM-1 is damaged or misbehaves because of this custom firmware. Use it at your own risk.",
+    install: "Install", other: "Español",
+    editor: "",
+    direct: "Connect the USB cable directly to the computer, no hub.",
+    brick: "If an install fails and the FM-1 no longer starts, it usually drops into its download mode on its own and can be recovered with",
+    beta: "CUMBIA is tested in real use; if something fails, let us know on GitHub. The authors accept no responsibility if your FM-1 is damaged or misbehaves because of this unofficial firmware. Use it at your own risk.",
     back: "Get official FM-1 V15 from M-VAVE and select the unmodified FM-1.fwsc. The browser validates it locally; it is not sent to a server.",
     stockTitle: "Return to official V15", stockFile: "Official FM-1.fwsc", stockGo: "Back up and return to official V15",
-    stockBackup: "Current music, saved music, sound banks, samples and settings are saved first. Older firmware needs a Felucca update for complete backups. To restore an archive later, reinstall Felucca and use the editor.",
+    stockBackup: "The music, sounds, samples and settings on the FM-1 are saved first.",
     stockRecovery: "Resume an interrupted update: I already saved a complete backup to this computer",
-    stockValid: "Official V15 verified", stockConfirm: "Has the complete backup file been saved to this computer? Continue to return to official V15. Official V15 cannot open Felucca music.",
+    stockValid: "Official V15 verified", stockConfirm: "Has the complete backup file been saved to this computer? Continue to return to official V15.",
     stockNeedBackup: "An update loader cannot export a backup. Only select resume if you already saved a complete backup.",
-    stockUnsupported: "This Felucca does not support complete backups. Install the current Felucca first.",
+    stockUnsupported: "This version does not support complete backups. Install the current version first.",
     backup: "Saving complete backup ", stockError: "Cannot validate official firmware: ",
     nomidi: "This browser cannot do it. Open the page in Chrome or Edge.", loadfail: "Could not load: ",
     start: "1/2 Firmware: starting", verify: "1/2 Firmware: verifying", loader: "1/2 Firmware: switching to update mode", write: "1/2 Firmware: writing",
-    reboot: "1/2 Firmware: restarting (the screen goes dark for a moment)", done: "Done", stopped: "Stopped. Replug the USB cable and press Install again.",
+    reboot: "1/2 Firmware: restarting (the screen goes dark for a moment)", done: "Done. Hit PLAY.", stopped: "Stopped. Replug the USB cable and press Install again.",
     error: "Error: ",
     denied: "MIDI (SysEx) access was not allowed. Allow MIDI in the site settings (address bar) and press Install again.",
     notfound: "FM-1 not found. Check the USB cable (a data cable), close other apps that use MIDI, and press Install again.",
@@ -123,9 +124,10 @@ const TEXT = {
     leave: "Writing. Do not close the page.",
     license: "GPL-3.0, no warranty. Source:",
     kit: "2/2 Sounds: writing ", kitFail: "Could not write the sounds: ",
+    ready: "Ready to install",
   },
 };
-let lang = (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";
+let lang = (navigator.language || "es").toLowerCase().startsWith("en") ? "en" : "es";
 const t = (k) => TEXT[lang][k];
 let lastKey = null, lastArg = "";
 function applyLang() {
@@ -134,7 +136,7 @@ function applyLang() {
   $("lang").textContent = t("other");
   if (lastKey) $("status").textContent = t(lastKey) + lastArg;
 }
-$("lang").addEventListener("click", () => { lang = lang === "ja" ? "en" : "ja"; applyLang(); });
+$("lang").addEventListener("click", () => { lang = lang === "es" ? "en" : "es"; applyLang(); });
 applyLang();
 const sayK = (k, arg = "") => { lastKey = k; lastArg = arg; $("status").textContent = t(k) + arg; };
 const say = (txt) => { lastKey = null; $("status").textContent = txt; };
@@ -210,7 +212,7 @@ window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault
     const pkg = new Uint8Array(await r.arrayBuffer());
     if (productOf(pkg) !== meta.product) { sayK("badpkg"); return; }
     image = logicalImage(pkg);
-    say(`Felucca ${meta.version}`);
+    sayK("ready");
     $("go").disabled = false;
   } catch (e) { sayK("loadfail", e.message); }
 })();
