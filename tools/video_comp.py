@@ -128,7 +128,7 @@ class Fmt:
         if key not in s.cache:
             L=Image.new('L',(s.W,s.H)); d=ImageDraw.Draw(L)
             lines=[('Gratis · Free',font(56),255),('alandaf-lab.github.io/cumbia-fm1',font(40,'Medium'),255),
-                   ('Homenaje a Celso Piña, Sonido Dueñez,\nlos cholombianos de Monterrey y toda la gente\nque ha hecho este movimiento',font(34,'Regular'),150),('Alan Daf',font(34,'Regular'),150)]
+                   ('Homenaje a Celso Piña, Sonido Dueñez,\nlos cholombianos, Toy Selectah y toda la gente\nque ha hecho este movimiento en Monterrey',font(34,'Regular'),150),('Alan Daf',font(34,'Regular'),150)]
             if s.v:
                 lw=700; lg=logo.resize((lw,int(logo.height*lw/logo.width)),Image.LANCZOS); L.paste(lg,((s.W-lw)//2,170))
                 y=1180; 
