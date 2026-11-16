@@ -68,11 +68,11 @@ const TEXT = {
     direct: "Conecta el cable USB directo a la computadora, sin hub.",
     brick: "Si una instalación falla y el FM-1 ya no arranca, normalmente entra solo a su modo de descarga y se recupera con",
     beta: "CUMBIA se prueba en uso real; si algo falla, avísanos en GitHub. Los autores no se hacen responsables si tu FM-1 se daña o falla por usar este firmware no oficial. Úsalo bajo tu propio riesgo.",
-    back: "Descarga el firmware oficial V15 del FM-1 en M-VAVE y elige el FM-1.fwsc sin modificar. El navegador lo revisa aquí mismo; no se manda a ningún servidor.",
-    stockTitle: "Regresar al firmware oficial V15", stockFile: "FM-1.fwsc oficial", stockGo: "Respaldar y regresar al oficial V15",
+    back: "Descarga el firmware oficial (V15 o V16) del FM-1 en M-VAVE y elige el FM-1.fwsc sin modificar. El navegador lo revisa aquí mismo; no se manda a ningún servidor.",
+    stockTitle: "Regresar al firmware oficial (V15 o V16)", stockFile: "FM-1.fwsc oficial", stockGo: "Respaldar y regresar al oficial",
     stockBackup: "Primero se guardan la música, los sonidos, las muestras y los ajustes que tenga el FM-1.",
     stockRecovery: "Continuar una actualización interrumpida: ya guardé un respaldo completo en esta computadora",
-    stockValid: "Firmware oficial V15 verificado", stockConfirm: "¿Ya quedó guardado el respaldo completo en esta computadora? Si continúas, el FM-1 regresa al oficial V15.",
+    stockValid: "Firmware oficial verificado: ", stockConfirm: "¿Ya quedó guardado el respaldo completo en esta computadora? Si continúas, el FM-1 regresa al firmware oficial.",
     stockNeedBackup: "En modo de actualización no se puede sacar un respaldo. Elige continuar solo si ya guardaste uno completo.",
     stockUnsupported: "Esta versión no permite el respaldo completo. Instala primero la versión actual.",
     backup: "Guardando respaldo completo ", stockError: "No se pudo validar el firmware oficial: ",
@@ -101,11 +101,11 @@ const TEXT = {
     direct: "Connect the USB cable directly to the computer, no hub.",
     brick: "If an install fails and the FM-1 no longer starts, it usually drops into its download mode on its own and can be recovered with",
     beta: "CUMBIA is tested in real use; if something fails, let us know on GitHub. The authors accept no responsibility if your FM-1 is damaged or misbehaves because of this unofficial firmware. Use it at your own risk.",
-    back: "Get official FM-1 V15 from M-VAVE and select the unmodified FM-1.fwsc. The browser validates it locally; it is not sent to a server.",
-    stockTitle: "Return to official V15", stockFile: "Official FM-1.fwsc", stockGo: "Back up and return to official V15",
+    back: "Get official FM-1 V15 or V16 from M-VAVE and select the unmodified FM-1.fwsc. The browser validates it locally; it is not sent to a server.",
+    stockTitle: "Return to official firmware (V15 or V16)", stockFile: "Official FM-1.fwsc", stockGo: "Back up and return to official firmware",
     stockBackup: "The music, sounds, samples and settings on the FM-1 are saved first.",
     stockRecovery: "Resume an interrupted update: I already saved a complete backup to this computer",
-    stockValid: "Official V15 verified", stockConfirm: "Has the complete backup file been saved to this computer? Continue to return to official V15.",
+    stockValid: "Official firmware verified: ", stockConfirm: "Has the complete backup file been saved to this computer? Continue to return to official firmware.",
     stockNeedBackup: "An update loader cannot export a backup. Only select resume if you already saved a complete backup.",
     stockUnsupported: "This version does not support complete backups. Install the current version first.",
     backup: "Saving complete backup ", stockError: "Cannot validate official firmware: ",
@@ -260,10 +260,10 @@ $("stock-file").addEventListener("change", async () => {
   const epoch = ++stockFileEpoch, file = $("stock-file").files[0]; stock = null; lockInstaller(false);
   if (!file) return;
   try {
-    if (file.size !== STOCK_V15_SIZE) throw new Error("FM-1 V15 / FM-1.fwsc");
+    if (!STOCK_SIZES.includes(file.size)) throw new Error("FM-1 V15 / V16 FM-1.fwsc");
     const verified = await validateStockPackage(new Uint8Array(await file.arrayBuffer()));
     if (epoch !== stockFileEpoch) return;
-    stock = verified; sayK("stockValid"); lockInstaller(false);
+    stock = verified; sayK("stockValid", verified.version); lockInstaller(false);
   } catch (e) { if (epoch === stockFileEpoch) sayK("stockError", e.message); }
 });
 function saveArchive(archive) {
