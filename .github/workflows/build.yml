@@ -61,10 +61,14 @@ jobs:
         env:
           FELUCCA_SLICE: '0'   # sin el motor SLICE ni su BREAK: espacio para el acordeón
           FELUCCA_UAC: '1'     # audio por USB (hay espacio desde que se quitaron los motores)
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "$GITHUB_REF_TYPE" = tag ]; then
-            ./build.sh --release "${GITHUB_REF_NAME#v}"
-            cp build/cumbia-"${GITHUB_REF_NAME#v}".fwsc build/felucca.fwsc
+          # RELEASE (en la raíz) dice la versión; en main, si su release vX.Y aún no existe, esta compilación la crea
+          V=$(cat RELEASE 2>/dev/null | tr -d ' \n')
+          if [ "$GITHUB_REF" = refs/heads/main ] && [ -n "$V" ] && ! gh release view "v$V" >/dev/null 2>&1; then
+            ./build.sh --release "$V"
+            cp build/cumbia-"$V".fwsc build/felucca.fwsc
+            echo "NEW_RELEASE=v$V" >> "$GITHUB_ENV"
           else
             ./build.sh
           fi
@@ -94,14 +98,14 @@ jobs:
             build/simbolos.txt
           if-no-files-found: error
 
-      - name: Release (solo con una etiqueta vX.Y)
-        if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+      - name: Release (cuando RELEASE trae una versión nueva)
+        if: env.NEW_RELEASE
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/felucca.fwsc build/cumbia.fwsc
-          gh release create "$GITHUB_REF_NAME" build/cumbia.fwsc --title "CUMBIA $GITHUB_REF_NAME" \
-            --notes "CUMBIA $GITHUB_REF_NAME para el M-VAVE FM-1 (identidad FM-1_925). Se instala desde https://alandaf-lab.github.io/cumbia-fm1/webapp/installer/, que también escribe los sonidos (percusión y gritos) después del firmware."
+          gh release create "$NEW_RELEASE" build/cumbia.fwsc --target "$GITHUB_SHA" --title "CUMBIA $NEW_RELEASE" \
+            --notes "CUMBIA $NEW_RELEASE para el M-VAVE FM-1 (identidad FM-1_925). Se instala desde https://alandaf-lab.github.io/cumbia-fm1/webapp/installer/, que también escribe los sonidos (percusión y gritos) después del firmware."
 
       - name: Armar el instalador web
         run: python3 web/make_site.py build/felucca.fwsc "0.1-${GITHUB_SHA::7}" site
