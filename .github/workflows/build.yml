@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # (las versiones: una etiqueta vX.Y crea su release con cumbia.fwsc)
   pages: write
   id-token: write
 
@@ -61,7 +61,13 @@ jobs:
         env:
           FELUCCA_SLICE: '0'   # sin el motor SLICE ni su BREAK: espacio para el acordeón
           FELUCCA_UAC: '1'     # audio por USB (hay espacio desde que se quitaron los motores)
-        run: ./build.sh
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            ./build.sh --release "${GITHUB_REF_NAME#v}"
+            cp build/cumbia-"${GITHUB_REF_NAME#v}".fwsc build/felucca.fwsc
+          else
+            ./build.sh
+          fi
 
       - name: Tócalo aquí (el firmware en WebAssembly)
         continue-on-error: true   # (si falla, el sitio sale sin el reproductor)
@@ -87,6 +93,15 @@ jobs:
             build/loader/ota.bin
             build/simbolos.txt
           if-no-files-found: error
+
+      - name: Release (solo con una etiqueta vX.Y)
+        if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/felucca.fwsc build/cumbia.fwsc
+          gh release create "$GITHUB_REF_NAME" build/cumbia.fwsc --title "CUMBIA $GITHUB_REF_NAME" \
+            --notes "CUMBIA $GITHUB_REF_NAME para el M-VAVE FM-1 (identidad FM-1_925). Se instala desde https://alandaf-lab.github.io/cumbia-fm1/webapp/installer/, que también escribe los sonidos (percusión y gritos) después del firmware."
 
       - name: Armar el instalador web
         run: python3 web/make_site.py build/felucca.fwsc "0.1-${GITHUB_SHA::7}" site
