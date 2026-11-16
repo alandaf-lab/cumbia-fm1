@@ -1,0 +1,10 @@
+{
+  "what": "A cumbia generator in the Monterrey Colombian tradition: roll the die for a new song with accordion, bass, guacharaca and congas, throw in sonidero shouts with echo, and slow it all down like a cumbia rebajada. Tribute to Celso Piña and Sonido Dueñez.",
+  "author": "Alan Daf",
+  "kinds": "groove",
+  "play": "https://alandaf-lab.github.io/cumbia-fm1/play/",
+  "cheat": "https://alandaf-lab.github.io/cumbia-fm1/#uso",
+  "image": "fmhub.png",
+  "color": "#FFFFFF",
+  "sounds": "licensed: free sample banks for the percussion and accordion, royalty-free; the shouts are the author's own recordings; piano, flute and sax CC0 (VSCO-2-CE, VCSL, from Felucca)"
+}
