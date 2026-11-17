@@ -374,6 +374,8 @@ static cb_q_t cb_q[CB_NQ];
 static uint32_t cb_nq;
 static uint8_t cb_gen[NTRK][128];        /* la nota k de la pista: su nota-on más reciente (un off viejo no la corta) */
 static uint8_t cb_on[NTRK][16];          /* bit: suena por nosotros */
+static volatile uint8_t cb_acc_quiet;    /* el acordeón del firmware callado (las teclas blancas siguen sonando) */
+static volatile uint8_t cb_acc_off_req;  /* apagar las notas del acordeón que ya suenan (en cumbia_tick) */
 static uint8_t cb_play, cb_end;
 static uint32_t cb_step, cb_pos, cb_len16;
 
@@ -416,6 +418,8 @@ static void q_fire(cb_q_t *e)
 {
     track_t *t = &trk[e->tr];
     if (e->vel) {
+        if (e->tr == CB_ACC && cb_acc_quiet)
+            return;                       /* acordeón callado: el firmware no toca (el teclado, sí) */
         if (e->tr == CB_PERC && cb_kit)
             cb_perc_room();
         if (e->tr == CB_ACC)
@@ -609,10 +613,14 @@ static void cb_levels(void)              /* los niveles de las pistas (el boom b
     uint32_t i;
     for (i = 0; i < NPART; i++) {
         uint32_t v = cb_mix[i];
+        uint32_t quiet = ((cb_mute >> i) & 1u) || (cb_solo < NPART && cb_solo != i);
         if (i == CB_PERC && cbc.bb)
             v = v * 11u / 10u;            /* el boom bap con impacto, a medio camino (+3 dB fue demasiado) */
-        if (((cb_mute >> i) & 1u) || (cb_solo < NPART && cb_solo != i) ||
-            (cbc.corte == 1u && (i == CB_BAJO || i == CB_PERC)))
+        if (i == CB_ACC) {                /* el acordeón: se calla lo que toca el firmware, no el teclado (tú tocas encima) */
+            if (quiet && !cb_acc_quiet)
+                cb_acc_off_req = 1;
+            cb_acc_quiet = (uint8_t)quiet;
+        } else if (quiet || (cbc.corte == 1u && (i == CB_BAJO || i == CB_PERC)))
             v = 0;                        /* callada: el nivel a 0 (P_MUTE solo frena las notas nuevas) */
         trk[i].p[P_LEVEL] = (int16_t)(v > 127u ? 127u : v);
     }
@@ -841,6 +849,13 @@ static void cumbia_tick(uint32_t n)
     if (cb_kill) {
         cb_kill = 0;
         cb_all_off();
+    }
+    if (cb_acc_off_req) {                                     /* se calló el acordeón: suelta sus notas (las del firmware) */
+        cb_acc_off_req = 0;
+        for (k = 0; k < 128u; k++)
+            if (cb_on[CB_ACC][k >> 3] & (1u << (k & 7u)))
+                trk_note_off(&trk[CB_ACC], k);
+        memset(cb_on[CB_ACC], 0, sizeof cb_on[CB_ACC]);
     }
     if (cb_play && song.playing) {
         if (cb_step == 0) {                                   /* PLAY: el paso 0 ahora */
