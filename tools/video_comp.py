@@ -22,7 +22,7 @@ CAP=[  # inicio, fin, botón, mantener, español, inglés
  (53.0,56.5,'EDIT',1,'Corte','Cut'),
  (56.5,60.0,'LFO',1,'Repetición','Repeat'),
  (60.0,63.8,'ARP',1,'Eco a todo','Echo on everything'),
- (63.8,70.4,'GLO',0,'La mezcla: deja sola\no calla cada parte','The mix: solo or mute each part'),
+ (63.8,70.4,'GLO + FX',0,'Calla el acordeón\ny tócalo tú','Mute the accordion and play it yourself:\nthe groove keeps going'),
  (70.4,74.2,'OCT+',0,'Medio tono arriba','Up a half step'),
  (74.2,78.6,'HOME',0,'Cambia quién baila','Switch dancers'),
 ]

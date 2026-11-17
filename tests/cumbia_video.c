@@ -31,9 +31,9 @@ static const struct { float t; int what; int v; } EV[] = {
     {53.2f, DOWN, B_EDIT}, {54.8f, UP, B_EDIT},
     {56.7f, DOWN, B_LFO}, {58.3f, UP, B_LFO},
     {60.2f, DOWN, B_ARP}, {60.6f, GRITO, 6}, {63.0f, UP, B_ARP},
-    {64.0f, DOWN, B_GLO}, {64.5f, PRESS, B_FX}, {65.0f, UP, B_GLO},
-    {66.4f, PRESS, B_SCL}, {67.2f, PRESS, B_SCL},
-    {67.8f, PRESS, B_GLO}, {68.2f, DOWN, B_GLO}, {68.5f, PRESS, B_FX}, {68.8f, UP, B_GLO}, {69.8f, PRESS, B_GLO},
+    {64.0f, PRESS, B_GLO}, {64.5f, PRESS, B_FX},
+    {65.20f, KDOWN, 14}, {65.45f, KUP, 14}, {65.50f, KDOWN, 16}, {65.75f, KUP, 16}, {65.80f, KDOWN, 18}, {66.35f, KUP, 18}, {66.40f, KDOWN, 16}, {66.65f, KUP, 16}, {66.70f, KDOWN, 14}, {66.95f, KUP, 14}, {67.00f, KDOWN, 12}, {67.55f, KUP, 12}, {67.60f, KDOWN, 14}, {67.85f, KUP, 14}, {67.90f, KDOWN, 16}, {68.15f, KUP, 16}, {68.20f, KDOWN, 19}, {69.05f, KUP, 19}, {69.10f, KDOWN, 18}, {69.35f, KUP, 18}, {69.40f, KDOWN, 16}, {69.95f, KUP, 16},
+    {70.05f, PRESS, B_FX}, {70.3f, PRESS, B_GLO},
     {70.6f, PRESS, B_SEQ}, {71.1f, PRESS, B_OCTUP},
     {74.5f, PRESS, B_HOME}, {76.0f, GRITO, 3}, {80.5f, GRITO, 1},
 };
