@@ -7,21 +7,24 @@ def font(sz, w='Bold'):
     try: f.set_variation_by_name(w)
     except Exception: pass
     return f
-FPS=30; DUR=69; SCR_END=59.8; TOY=(59.8,63.6); OUT=63.8
+FPS=30; DUR=90; SCR_END=78.8; TOY=(78.8,82.6); OUT=82.8
 raw=np.memmap(f'{R}/build/video/toma.rgb',np.uint8,'r').reshape(-1,240,240,3)
 CAP=[  # inicio, fin, botón, mantener, español, inglés
- (4.0,10.3,'REC',0,'Tira el dado:\nnace una cumbia nueva','Roll the die: a brand-new cumbia'),
- (10.3,16.0,'TECLAS NEGRAS · BLACK KEYS',0,'Gritos con eco\nde sonidero','Shouts with a sonidero echo'),
- (16.0,27.5,'KNOB 1',0,'La rebajada:\nla cinta se frena','Rebajada: the tape slows down,\npitch and all'),
- (27.5,32.5,'SEQ',0,'Boom bap:\nentra el DJ','Boom bap: the DJ steps in'),
- (32.5,36.3,'SCL',1,'Ahogada','Muffled'),
- (36.3,39.8,'FX',1,'Cinta para atrás','Tape rewind'),
- (39.8,43.3,'EDIT',1,'Corte','Cut'),
- (43.3,46.8,'LFO',1,'Repetición','Repeat'),
- (46.8,50.5,'ARP',1,'Eco a todo','Echo on everything'),
- (50.5,53.4,'OCT+',0,'Medio tono arriba,\ncomo en el último tramo','Up a half step,\nlike the last stretch of the song'),
- (53.4,56.0,'TECLAS BLANCAS · WHITE KEYS',0,'Toca tu acordeón\nencima de la cumbia','Play your own accordion on top'),
- (56.0,59.6,'HOME',0,'Cambia quién baila','Switch dancers'),
+ (4.5,10.4,'REC',0,'Tira el dado:\nnace una cumbia nueva','Roll the die: a brand-new cumbia'),
+ (10.4,15.6,'',0,'No la programas:\nla diriges','You don\'t program it: you run it'),
+ (15.6,22.2,'TECLAS · KEYS',0,'Blancas: tu acordeón\nNegras: los gritos','White: your accordion. Black: the shouts.\nThe rest plays itself'),
+ (22.2,32.2,'KNOB 1',0,'La rebajada:\nla cinta se frena','Rebajada: the tape slows down,\npitch and all'),
+ (32.2,37.2,'PRESETS',0,'Cambia el bajo','Change the bass line'),
+ (37.2,41.0,'ALGORITHM',0,'Más o menos\nsentimiento','More or less feel'),
+ (41.0,46.0,'SEQ',0,'Boom bap:\nentra el DJ','Boom bap: the DJ steps in'),
+ (46.0,49.5,'SCL',1,'Ahogada','Muffled'),
+ (49.5,53.0,'FX',1,'Cinta para atrás','Tape rewind'),
+ (53.0,56.5,'EDIT',1,'Corte','Cut'),
+ (56.5,60.0,'LFO',1,'Repetición','Repeat'),
+ (60.0,63.8,'ARP',1,'Eco a todo','Echo on everything'),
+ (63.8,70.4,'GLO',0,'La mezcla: deja sola\no calla cada parte','The mix: solo or mute each part'),
+ (70.4,74.2,'OCT+',0,'Medio tono arriba','Up a half step'),
+ (74.2,78.6,'HOME',0,'Cambia quién baila','Switch dancers'),
 ]
 logo=Image.open(f'{IMG}/logo.png').convert('L')
 def load(n):
@@ -68,7 +71,7 @@ class Fmt:
     def frame(s,n):
         t=n/FPS; out=Image.new('L',(s.W,s.H),0); rgb=None
         # pantalla
-        sa=ease((t-3.4)/0.6)*ease((SCR_END-t)/0.6)
+        sa=ease((t-3.9)/0.6)*ease((SCR_END-t)/0.6)
         if sa>0:
             sc=Image.fromarray(raw[min(n,len(raw)-1)]).resize((960,960),Image.NEAREST)
             base=Image.new('RGB',(s.W,s.H)); x,y=s.scr
@@ -81,13 +84,13 @@ class Fmt:
             a=fade(t,c[0],c[1],0.25)
             if a>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*a)),lay,s.caption(c)) if a<1 else Image.composite(Image.new('L',(s.W,s.H),255),lay,s.caption(c))
         # intro
-        ia=fade(t,-1,3.8,0.5)
+        ia=fade(t,-1,4.3,0.5)
         if ia>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*ia)),lay,s.intro())
         oa=fade(t,OUT,DUR+1,0.6)*ease((DUR-0.1-t)/0.6)
         if oa>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*oa)),lay,s.outro(t))
         ta=fade(t,TOY[0],TOY[1],0.5)
         if ta>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*ta)),lay,s.toy())
-        if s.v and 3.4<t<SCR_END:
+        if s.v and 3.9<t<SCR_END:
             lay=Image.composite(Image.new('L',(s.W,s.H),110),lay,s.foot_l())
         rgb.paste((255,255,255),(0,0),lay)
         return rgb
@@ -97,7 +100,7 @@ class Fmt:
         lw=900 if s.v else 1000; lg=logo.resize((lw,int(logo.height*lw/logo.width)),Image.LANCZOS)
         y=(s.H-lg.height)//2-120; L.paste(lg,((s.W-lw)//2,y))
         y+=lg.height+50
-        for txt,f,c in [('Firmware de cumbia para el M-VAVE FM-1',font(44 if s.v else 48,'SemiBold'),255),('A cumbia firmware for the M-VAVE FM-1',font(34 if s.v else 36,'Regular'),150)]:
+        for txt,f,c in [('Un sonidero de bolsillo para el M-VAVE FM-1',font(44 if s.v else 48,'SemiBold'),255),('A pocket sonidero for the M-VAVE FM-1',font(34 if s.v else 36,'Regular'),150),('por Alan Daf',font(44 if s.v else 46,'SemiBold'),255)]:
             w=d.textlength(txt,font=f); d.text(((s.W-w)//2,y),txt,font=f,fill=c); y+=70
         s.cache['intro']=L; return L
     def toy(s):
@@ -124,6 +127,7 @@ class Fmt:
         if key not in s.cache:
             L=Image.new('L',(s.W,s.H)); d=ImageDraw.Draw(L)
             lines=[('Gratis · Free',font(56),255),('alandaf-lab.github.io/cumbia-fm1',font(40,'Medium'),255),
+                   ('Instálalo desde la página:\ncarga también los sonidos',font(32,'Regular'),210),
                    ('Homenaje a Celso Piña, Sonido Dueñez,\nlos cholombianos, Toy Selectah y toda la gente\nque ha hecho este movimiento en Monterrey',font(34,'Regular'),150),('Alan Daf',font(34,'Regular'),150)]
             if s.v:
                 lw=700; lg=logo.resize((lw,int(logo.height*lw/logo.width)),Image.LANCZOS); L.paste(lg,((s.W-lw)//2,170))
