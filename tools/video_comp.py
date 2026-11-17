@@ -7,7 +7,7 @@ def font(sz, w='Bold'):
     try: f.set_variation_by_name(w)
     except Exception: pass
     return f
-FPS=30; DUR=66; SCR_END=59.8; TOY=(999,999); OUT=60.2
+FPS=30; DUR=69; SCR_END=59.8; TOY=(59.8,63.6); OUT=63.8
 raw=np.memmap(f'{R}/build/video/toma.rgb',np.uint8,'r').reshape(-1,240,240,3)
 CAP=[  # inicio, fin, botón, mantener, español, inglés
  (4.0,10.3,'REC',0,'Tira el dado:\nnace una cumbia nueva','Roll the die: a brand-new cumbia'),
@@ -19,7 +19,8 @@ CAP=[  # inicio, fin, botón, mantener, español, inglés
  (39.8,43.3,'EDIT',1,'Corte','Cut'),
  (43.3,46.8,'LFO',1,'Repetición','Repeat'),
  (46.8,50.5,'ARP',1,'Eco a todo','Echo on everything'),
- (50.5,56.0,'OCT+',0,'Medio tono arriba,\ncomo en el último tramo','Up a half step,\nlike the last stretch of the song'),
+ (50.5,53.4,'OCT+',0,'Medio tono arriba,\ncomo en el último tramo','Up a half step,\nlike the last stretch of the song'),
+ (53.4,56.0,'TECLAS BLANCAS · WHITE KEYS',0,'Toca tu acordeón\nencima de la cumbia','Play your own accordion on top'),
  (56.0,59.6,'HOME',0,'Cambia quién baila','Switch dancers'),
 ]
 logo=Image.open(f'{IMG}/logo.png').convert('L')
@@ -102,14 +103,9 @@ class Fmt:
     def toy(s):
         if 'toy' in s.cache: return s.cache['toy']
         L=Image.new('L',(s.W,s.H)); d=ImageDraw.Draw(L)
-        if s.v:
-            es='En 2001, Toy Selectah\ncruzó la cumbia de Celso Piña\ncon el hip hop y el reggae:\n«Cumbia sobre el río»'
-            en='In 2001, Toy Selectah crossed\nCelso Piña\'s cumbia with hip hop\nand reggae on “Cumbia sobre el río”'
-            fe,fn,w=font(64),font(40,'Regular'),940
-        else:
-            es='En 2001, Toy Selectah cruzó\nla cumbia de Celso Piña con el hip hop\ny el reggae: «Cumbia sobre el río»'
-            en='In 2001, Toy Selectah crossed Celso Piña\'s cumbia with hip hop\nand reggae on “Cumbia sobre el río”'
-            fe,fn,w=font(68),font(40,'Regular'),1700
+        es='Grábala en tu DAW por USB,\npista por pista'
+        en='Record it in your DAW over USB, track by track'
+        fe,fn,w=(font(76),font(42,'Regular'),940) if s.v else (font(80),font(44,'Regular'),1700)
         while max(d.textlength(l,font=fe) for l in es.split('\n'))>w: fe=font(fe.size-4)
         h1=d.multiline_textbbox((0,0),es,font=fe,spacing=14)[3]; h2=d.multiline_textbbox((0,0),en,font=fn,spacing=10)[3]
         y=(s.H-h1-50-h2)//2

@@ -14,7 +14,7 @@ static void slot_load(uint32_t k, const char *hdr, const char *bin)
     if (b) fclose(b);
 }
 /* el guion: segundo, qué, valor */
-enum { PRESS, DOWN, UP, GRITO, REB };
+enum { PRESS, DOWN, UP, GRITO, REB, KDOWN, KUP };
 static const struct { float t; int what; int v; } EV[] = {
     {0.0f, PRESS, B_PLAY},
     {4.0f, PRESS, B_REC},
@@ -28,7 +28,9 @@ static const struct { float t; int what; int v; } EV[] = {
     {47.1f, DOWN, B_ARP}, {47.5f, GRITO, 6}, {49.9f, UP, B_ARP},
     {50.7f, PRESS, B_SEQ},
     {51.7f, PRESS, B_OCTUP},
-    {54.1f, GRITO, 10}, {56.0f, PRESS, B_HOME}, {56.5f, GRITO, 3},
+    {53.7f, KDOWN, 14}, {54.0f, KUP, 14}, {54.05f, KDOWN, 16}, {54.35f, KUP, 16}, {54.4f, KDOWN, 18}, {55.0f, KUP, 18},
+    {55.05f, KDOWN, 16}, {55.3f, KUP, 16}, {55.35f, KDOWN, 14}, {55.9f, KUP, 14},
+    {56.0f, PRESS, B_HOME}, {56.5f, GRITO, 3},
     {59.8f, PRESS, B_SEQ}, {62.0f, GRITO, 1},
 };
 int main(int argc, char **argv)
@@ -63,6 +65,8 @@ int main(int argc, char **argv)
             case UP: fm1_in.buttons &= ~b; break;
             case GRITO: cb_grito((uint32_t)EV[ev].v); break;
             case REB: reb_left = EV[ev].v; break;
+            case KDOWN: if (!getenv("NOKEYS")) fm1_in.notes |= 1u << EV[ev].v; break;
+            case KUP: fm1_in.notes &= ~(1u << EV[ev].v); break;
             }
             ev++;
         }
