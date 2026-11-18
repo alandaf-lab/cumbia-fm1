@@ -9,6 +9,26 @@ def font(sz, w='Bold'):
     return f
 FPS=30; DUR=90; SCR_END=78.8; TOY=(78.8,82.6); OUT=82.8
 raw=np.memmap(f'{R}/build/video/toma.rgb',np.uint8,'r').reshape(-1,240,240,3)
+KEYS=np.fromfile(f'{R}/build/video/toma.keys',np.uint32)
+BLACK=[1,3,5,8,10,13,15,17,20,22,25]; WHITE=[k for k in range(27) if k not in BLACK]
+BAFTER=[0,1,2,4,5,7,8,9,11,12,14]   # la tecla negra va después de esta blanca
+def keys_alpha(n):                   # se ve mientras se tocan teclas (y un poco antes y después)
+    lo,hi=max(0,n-24),min(len(KEYS),n+24)
+    near=np.nonzero(KEYS[lo:hi])[0]
+    if not len(near): return 0.0
+    d=min(abs(lo+i-n) for i in near)/24.0
+    return ease(1.0-max(0.0,d-0.2)/0.8)
+def draw_keys(lay,x,y,w,h,mask,a):
+    L=Image.new('L',lay.size); d=ImageDraw.Draw(L); ww=w/16
+    for i,k in enumerate(WHITE):
+        box=(x+i*ww,y,x+(i+1)*ww-4,y+h)
+        d.rounded_rectangle(box,5,fill=255 if (mask>>k)&1 else 0,outline=255,width=2)
+    for j,k in enumerate(BLACK):
+        cx=x+(BAFTER[j]+1)*ww-2; bw=ww*0.62
+        box=(cx-bw/2,y,cx+bw/2,y+h*0.6)
+        d.rounded_rectangle(box,4,fill=255 if (mask>>k)&1 else 0,outline=255,width=2)
+    if (mask>>0)&1 or True: pass
+    return Image.composite(Image.new('L',lay.size,int(255*a)),lay,L) if True else lay
 CAP=[  # inicio, fin, botón, mantener, español, inglés
  (4.5,10.4,'REC',0,'Tira el dado:\nnace una cumbia nueva','Roll the die: a brand-new cumbia'),
  (10.4,15.6,'',0,'No la programas:\nla diriges','You don\'t program it: you run it'),
@@ -90,6 +110,10 @@ class Fmt:
         if oa>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*oa)),lay,s.outro(t))
         ta=fade(t,TOY[0],TOY[1],0.5)
         if ta>0: lay=Image.composite(Image.new('L',(s.W,s.H),int(255*ta)),lay,s.toy())
+        ka=keys_alpha(n) if 3.9<t<SCR_END else 0
+        if ka>0:
+            kx,ky,kw,kh=(530,96,470,72) if s.v else (1170,150,600,90)
+            lay=draw_keys(lay,kx,ky,kw,kh,int(KEYS[min(n,len(KEYS)-1)]),ka)
         if s.v and 3.9<t<SCR_END:
             lay=Image.composite(Image.new('L',(s.W,s.H),110),lay,s.foot_l())
         rgb.paste((255,255,255),(0,0),lay)

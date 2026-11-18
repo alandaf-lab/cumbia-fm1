@@ -42,11 +42,15 @@ int main(int argc, char **argv)
     char p[256];
     uint32_t secs = argc > 2 ? (uint32_t)atoi(argv[2]) : 62u, total, s, ui = 0, nextf = 0, ev = 0, i;
     int32_t o[2 * CTL], reb_left = 0;
-    FILE *w, *v;
+    FILE *w, *v, *kf;
+    static const uint8_t BLK[11] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25};
+    uint32_t grito_until[11] = {0};
     snprintf(p, sizeof p, "%s.wav", argv[1]);
     w = fopen(p, "wb");
     snprintf(p, sizeof p, "%s.rgb", argv[1]);
     v = fopen(p, "wb");
+    snprintf(p, sizeof p, "%s.keys", argv[1]);   /* por cuadro: las teclas apretadas (las negras, mientras suena el grito) */
+    kf = fopen(p, "wb");
     host_tracks_init();
     panel = PANEL_DEFAULT;
     for (i = 0; i < NPART; i++)
@@ -67,7 +71,7 @@ int main(int argc, char **argv)
             case PRESS: host_pressed |= b; break;
             case DOWN: fm1_in.buttons |= b; host_pressed |= b; break;
             case UP: fm1_in.buttons &= ~b; break;
-            case GRITO: cb_grito((uint32_t)EV[ev].v); break;
+            case GRITO: cb_grito((uint32_t)EV[ev].v); grito_until[EV[ev].v] = s + FS * 3u / 10u; break;
             case REB: reb_left = EV[ev].v; break;
             case KDOWN: if (!getenv("NOKEYS")) fm1_in.notes |= 1u << EV[ev].v; break;
             case KUP: fm1_in.notes &= ~(1u << EV[ev].v); break;
@@ -91,6 +95,11 @@ int main(int argc, char **argv)
             cb_ui_draw();
         }
         while (s + CTL > nextf * (FS / 30u)) {   /* 30 cuadros por segundo */
+            uint32_t km = fm1_in.notes, g;
+            for (g = 0; g < 11u; g++)
+                if (s < grito_until[g])
+                    km |= 1u << BLK[g];
+            fwrite(&km, 4, 1, kf);
             for (i = 0; i < 240u * 240u; i++) {
                 uint16_t c = host_screen[i];
                 c = (uint16_t)((c >> 8) | (c << 8));
@@ -103,6 +112,7 @@ int main(int argc, char **argv)
     }
     fclose(w);
     fclose(v);
+    fclose(kf);
     printf("%u cuadros, canción %u a %u BPM\n", nextf, cb.seed, cb.bpm);
     return 0;
 }
