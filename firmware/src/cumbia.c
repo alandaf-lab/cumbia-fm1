@@ -697,6 +697,8 @@ static void cumbia_tracks(void)          /* las cuatro pistas con los sonidos de
     }
     song.g[G_TUNE] = 0;
     song.g[G_SWING] = 0;
+    song.g[G_CLOCK] = 0;                  /* reloj interno: una sesión de otro firmware Felucca (Skiff, Felucca...) puede traer
+                                          * reloj externo (USB/TRS), y entonces PLAY espera un reloj que nunca llega */
     cb_perc_setup();
     cb_sends();
     cb_levels();
