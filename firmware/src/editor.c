@@ -656,11 +656,14 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
             const smp_user_hdr_t *h = (const smp_user_hdr_t *)smp_user_xip(i);
             char nm[9] = {0};
             uint32_t j;
-            ed_b(usr_nz[i]);
-            for (j = 0; usr_nz[i] && j < 8u; j++)
+            /* CUMBIA: una ranura cuyo audio ya no coincide con su CRC (otro firmware escribió encima, p. ej. el oficial
+             * V16 al volver a él) se reporta vacía: el instalador la vuelve a escribir en lugar de darla por buena */
+            uint32_t nz = usr_nz[i] && st_crc32(smp_user_xip(i) + SMP_USER_DATA, h->data_len) == h->crc ? usr_nz[i] : 0u;
+            ed_b(nz);
+            for (j = 0; nz && j < 8u; j++)
                 nm[j] = h->name[j] >= 32 && h->name[j] < 127 ? h->name[j] : 0;
             ed_str(nm, 8);
-            ed_b(usr_nz[i] ? (h->data_len + 1023u) / 1024u : 0u);
+            ed_b(nz ? (h->data_len + 1023u) / 1024u : 0u);
         }
         break;
     case ED_UP_LIST: {                                     /* start, count -> start, count, total, per slot: used, engine, name;
