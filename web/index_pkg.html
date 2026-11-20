@@ -31,6 +31,7 @@
 <main>
   <button class="lang" id="lang"></button>
   <h1><a href="../../"><img src="../../img/logo.png" alt="CUMBIA" style="height:84px;width:auto;display:block"></a></h1>
+  <p class="small" style="margin-top:-8px;opacity:.7"><span data-t="ver"></span> <span id="ver"></span></p>
   <p data-t="intro"></p>
   <p data-t="warn"></p>
   <p class="small" data-t="direct"></p>
@@ -91,6 +92,7 @@ const TEXT = {
     leave: "Escribiendo. No cierres la página.",
     license: "GPL-3.0, sin garantía. Código:",
     kit: "2/2 Sonidos: escribiendo ", kitFail: "No se pudieron escribir los sonidos: ",
+    ver: "Versión",
     ready: "Listo para instalar",
   },
   en: {
@@ -124,6 +126,7 @@ const TEXT = {
     leave: "Writing. Do not close the page.",
     license: "GPL-3.0, no warranty. Source:",
     kit: "2/2 Sounds: writing ", kitFail: "Could not write the sounds: ",
+    ver: "Version",
     ready: "Ready to install",
   },
 };
@@ -143,6 +146,7 @@ const say = (txt) => { lastKey = null; $("status").textContent = txt; };
 const log = (t) => { $("log").textContent += t + "\n"; };
 let image = null;
 const meta = /*META*/;
+$("ver").textContent = meta.release;
 /*KIT*/
 const edPack7 = (b) => {                   /* el empaquetado del editor (editor.html pack7), no el de la OTA */
   const out = [];

@@ -50,7 +50,8 @@ def main(pkg, version, out):
         strip_module((HERE / "fm1ota.js").read_text(encoding="utf-8")) + "\n" + \
         strip_module((HERE / "fm1backup.js").read_text(encoding="utf-8"))
     name = f"felucca-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
-    meta = json.dumps({"version": version, "product": product, "pkg": "../../firmware/" + name})
+    rel = (HERE.parent / "RELEASE").read_text().strip() if (HERE.parent / "RELEASE").exists() else version   # cumbia: la versión a la vista
+    meta = json.dumps({"version": version, "release": rel, "product": product, "pkg": "../../firmware/" + name})
     kit = (HERE / "kit_perc.js").read_text(encoding="utf-8") + (HERE / "gritos.js").read_text(encoding="utf-8")   # cumbia
     for mark in ("/*LIB*/", "/*META*/", "/*KIT*/"):
         if html.count(mark) != 1:
